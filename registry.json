@@ -1,0 +1,115 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "ski-ai-concierge-design-system",
+  "items": [
+    {
+      "name": "design-system",
+      "type": "registry:style",
+      "cssVars": {
+        "theme": {
+          "font-inter": "var(--font-inter)",
+          "font-jetbrains-mono": "var(--font-jetbrains-mono)",
+          "font-space-grotesk": "var(--font-space-grotesk)",
+          "radius": "10px"
+        },
+        "light": {
+          "primary": "202 85% 30%",
+          "primary-foreground": "0 0% 100%",
+          "secondary": "206 26% 95%",
+          "secondary-foreground": "208 29% 9%",
+          "tertiary": "25 74% 53%",
+          "neutral": "210 29% 97%",
+          "background": "210 29% 97%",
+          "foreground": "208 29% 9%",
+          "surface": "0 0% 100%",
+          "surface-variant": "206 26% 95%",
+          "on-surface": "208 29% 9%",
+          "on-surface-variant": "206 13% 38%",
+          "muted": "206 26% 95%",
+          "muted-foreground": "206 13% 38%",
+          "accent": "205 52% 94%",
+          "accent-foreground": "202 85% 30%",
+          "outline": "208 22% 87%",
+          "border": "208 22% 87%",
+          "input": "208 22% 87%",
+          "ring": "202 85% 30%",
+          "card": "0 0% 100%",
+          "card-foreground": "208 29% 9%",
+          "popover": "0 0% 100%",
+          "popover-foreground": "208 29% 9%",
+          "success": "150 59% 30%",
+          "alert": "35 83% 43%",
+          "error": "6 63% 46%",
+          "destructive": "6 63% 46%"
+        },
+        "dark": {
+          "primary": "202 85% 30%",
+          "primary-foreground": "0 0% 0%",
+          "secondary": "206 26% 95%",
+          "secondary-foreground": "208 29% 91%",
+          "tertiary": "25 74% 53%",
+          "neutral": "210 29% 3%",
+          "background": "210 29% 3%",
+          "foreground": "208 29% 91%",
+          "surface": "0 0% 0%",
+          "surface-variant": "206 26% 5%",
+          "on-surface": "208 29% 91%",
+          "on-surface-variant": "206 13% 62%",
+          "muted": "206 26% 5%",
+          "muted-foreground": "206 13% 62%",
+          "accent": "205 52% 94%",
+          "accent-foreground": "202 85% 70%",
+          "outline": "208 22% 13%",
+          "border": "208 22% 13%",
+          "input": "208 22% 13%",
+          "ring": "202 85% 30%",
+          "card": "0 0% 0%",
+          "card-foreground": "208 29% 91%",
+          "popover": "0 0% 0%",
+          "popover-foreground": "208 29% 91%",
+          "success": "150 59% 30%",
+          "alert": "35 83% 57%",
+          "error": "6 63% 46%",
+          "destructive": "6 63% 46%"
+        }
+      },
+      "tailwind": {
+        "config": {
+          "theme": {
+            "extend": {
+              "fontFamily": {
+                "inter": [
+                  "var(--font-inter)",
+                  "sans-serif"
+                ],
+                "jetbrains-mono": [
+                  "var(--font-jetbrains-mono)",
+                  "sans-serif"
+                ],
+                "space-grotesk": [
+                  "var(--font-space-grotesk)",
+                  "sans-serif"
+                ]
+              },
+              "borderRadius": {
+                "sm": "6px",
+                "md": "10px",
+                "lg": "16px",
+                "xl": "24px",
+                "full": "9999px"
+              },
+              "spacing": {
+                "xs": "4px",
+                "sm": "8px",
+                "md": "16px",
+                "lg": "24px",
+                "xl": "40px",
+                "2xl": "64px"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

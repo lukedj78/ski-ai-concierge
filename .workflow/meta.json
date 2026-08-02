@@ -12,7 +12,7 @@
     "payments": null,
     "deploy": "vercel",
     "nextjs_version": "16",
-    "ui_base": "radix",
+    "ui_base": "base",
     "icon_library": "lucide",
     "agent": "eve",
     "route_groups": [],

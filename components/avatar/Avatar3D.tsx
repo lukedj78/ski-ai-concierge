@@ -7,7 +7,7 @@ import {
 } from "@pixiv/three-vrm";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
-import { type Group, type Mesh, Vector3 } from "three";
+import { Box3, type Group, type Mesh, Vector3 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { AvatarFallbackBoundary } from "./AvatarFallbackBoundary";
 import { idleMotion } from "./animations/idle";
@@ -149,17 +149,45 @@ function GlbFigure({
       gltf.scene.getObjectByName("head") ??
       null;
 
-    // I modelli a figura intera stanno in piedi con i piedi a quota zero: la
-    // testa finisce a un metro e mezzo sopra la camera. Si abbassa la figura
-    // finche' la testa non e' all'altezza dell'inquadratura, invece di
-    // spostare la camera per ogni modello diverso.
+    gltf.scene.updateWorldMatrix(true, true);
+
+    // L'inquadratura si adatta al modello, non il contrario. Arrivano cose
+    // molto diverse: un umanoide a figura intera in metri (Ready Player Me,
+    // Avaturn), oppure una testa o un busto generati da un servizio come
+    // ChatAvatar, spesso in un'altra scala e senza scheletro.
     let verticalOffset = 0;
+    let scale = 1;
+
     if (head) {
-      gltf.scene.updateWorldMatrix(true, true);
+      // Umanoide riggato: si abbassa finche' la testa non e' in inquadratura.
       verticalOffset = -head.getWorldPosition(new Vector3()).y;
+    } else {
+      // Solo testa o busto: si normalizza sull'ingombro. `TARGET_HEIGHT` e'
+      // circa il 55% dell'altezza visibile dalla camera, cosi' resta aria
+      // sopra la testa invece di un primo piano schiacciato sui bordi.
+      const TARGET_HEIGHT = 0.85;
+      const box = new Box3().setFromObject(gltf.scene);
+      const size = box.getSize(new Vector3());
+      const center = box.getCenter(new Vector3());
+      if (size.y > 0) scale = TARGET_HEIGHT / size.y;
+      verticalOffset = -center.y * scale;
     }
 
-    return { morphMeshes, head, verticalOffset };
+    // I nomi dei blendshape non sono standardizzati fuori da ARKit e dai
+    // visemi Oculus: se non se ne riconosce nessuno, si cerca qualcosa che
+    // apra la bocca. Meglio un lip sync approssimativo di una bocca ferma.
+    const known = ["viseme_aa", "jawOpen", "mouthOpen"];
+    const dictionaries = morphMeshes.map((mesh) => mesh.morphTargetDictionary);
+    const hasKnown = dictionaries.some((dictionary) =>
+      known.some((name) => dictionary && name in dictionary),
+    );
+    const discovered = hasKnown
+      ? null
+      : (dictionaries
+          .flatMap((dictionary) => Object.keys(dictionary ?? {}))
+          .find((name) => /jaw|mouth.*open|open.*mouth/i.test(name)) ?? null);
+
+    return { morphMeshes, head, verticalOffset, scale, discovered };
   }, [gltf]);
 
   function setMorph(name: string, value: number) {
@@ -174,26 +202,38 @@ function GlbFigure({
     const time = performance.now() / 1000;
     const motion = idleMotion(time, state);
 
+    gltf.scene.scale.setScalar(rig.scale);
     gltf.scene.position.y = rig.verticalOffset + motion.breath;
+
     if (rig.head) {
       rig.head.rotation.y = motion.headYaw;
       rig.head.rotation.x = motion.headPitch;
+    } else {
+      // Senza scheletro si muove l'intera scena: su una testa o un busto e'
+      // indistinguibile dal movimento del collo.
+      gltf.scene.rotation.y = motion.headYaw;
+      gltf.scene.rotation.x = motion.headPitch;
     }
 
     const target = state === "speaking" ? mouthOpening(amplitude) : 0;
     opening.current = damp(opening.current, target);
     const weights = visemeWeights(opening.current);
 
-    // Visemi Oculus, quando ci sono.
-    setMorph("viseme_aa", weights.aa);
-    setMorph("viseme_I", weights.ih);
-    setMorph("viseme_O", weights.ou);
-    // ARKit: la mandibola apre la bocca anche sui modelli senza visemi.
-    setMorph("jawOpen", opening.current * 0.6);
-    // Un accenno di sorriso mentre ascolta.
-    const smile = state === "listening" ? 0.3 : 0.1;
-    setMorph("mouthSmileLeft", smile);
-    setMorph("mouthSmileRight", smile);
+    if (rig.discovered) {
+      setMorph(rig.discovered, opening.current);
+    } else {
+      // Visemi Oculus, quando ci sono.
+      setMorph("viseme_aa", weights.aa);
+      setMorph("viseme_I", weights.ih);
+      setMorph("viseme_O", weights.ou);
+      // ARKit: la mandibola apre la bocca anche sui modelli senza visemi.
+      setMorph("jawOpen", opening.current * 0.6);
+      setMorph("mouthOpen", opening.current * 0.5);
+      // Un accenno di sorriso mentre ascolta.
+      const smile = state === "listening" ? 0.3 : 0.1;
+      setMorph("mouthSmileLeft", smile);
+      setMorph("mouthSmileRight", smile);
+    }
   });
 
   return <primitive object={gltf.scene} />;

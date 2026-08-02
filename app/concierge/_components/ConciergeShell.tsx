@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AvatarController } from "@/components/avatar/AvatarController";
 import { useVisemeTimeline } from "@/components/avatar/animations/useVisemeTimeline";
 import { ChatPanel } from "@/components/chat/ChatPanel";
+import { CreditMeter } from "@/components/voice/CreditMeter";
 import { VoiceStatus } from "@/components/voice/VoiceStatus";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -81,6 +82,9 @@ export function ConciergeShell({
 
   /** Il modello vocale sta preparando una risposta. */
   const [responding, setResponding] = useState(false);
+
+  // Cresce a ogni turno concluso: fa rileggere il saldo del Gateway.
+  const [turnsDone, setTurnsDone] = useState(0);
   const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const greeted = useRef(false);
   const askResolver = useRef<{
@@ -255,7 +259,10 @@ export function ConciergeShell({
       // Fra la domanda e la prima sillaba passano dei secondi: senza un segno
       // sullo schermo la conversazione sembra piantata.
       if (event.type === "response-created") setResponding(true);
-      if (event.type === "response-done") setResponding(false);
+      if (event.type === "response-done") {
+        setResponding(false);
+        setTurnsDone((count) => count + 1);
+      }
 
       // Il hook riproduce l'audio da se': l'ampiezza per il lip sync si ricava
       // dai chunk PCM16 in arrivo, che sono lo stesso audio un istante prima
@@ -433,9 +440,12 @@ export function ConciergeShell({
 
           <VoiceStatus state={avatarState} notice={notice} />
 
-          <span className="ml-auto font-[family-name:var(--font-jetbrains-mono)] text-[12px] uppercase tracking-wide text-on-surface-variant">
-            {micOn ? "microfono acceso" : "microfono spento"}
-          </span>
+          <div className="ml-auto flex items-center gap-4">
+            <CreditMeter refreshKey={turnsDone} />
+            <span className="font-[family-name:var(--font-jetbrains-mono)] text-[12px] uppercase tracking-wide text-on-surface-variant">
+              {micOn ? "microfono acceso" : "microfono spento"}
+            </span>
+          </div>
         </div>
       </div>
     </div>

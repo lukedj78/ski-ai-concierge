@@ -23,8 +23,8 @@ const schema = z.object({
   VOICE_AGENT_MODEL: z.string().min(1).default("anthropic/claude-haiku-4.5"),
 
   // I modelli della voce non stanno qui: li definisce il sub-agente in
-  // agent/subagents/voice/models.ts. Le variabili VOICE_* e REALTIME_* le
-  // legge quel modulo.
+  // agent/subagents/voice/models.ts, che legge VOICE_STT_MODEL,
+  // REALTIME_MODEL e REALTIME_VOICE.
 
   // Embedding per la ricerca semantica sulla documentazione del negozio.
   EMBEDDING_MODEL: z.string().min(1).default("openai/text-embedding-3-small"),

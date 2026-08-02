@@ -192,20 +192,31 @@ export function ConciergeShell({
   // La configurazione va memorizzata: un oggetto nuovo a ogni render fa
   // rientrare il hook nel proprio effetto di sincronizzazione all'infinito
   // ("Maximum update depth exceeded").
-  const sessionConfig = useMemo(
-    () => ({
+  const sessionConfig = useMemo(() => {
+    const base = {
       voice,
       turnDetection: { type: "server-vad" as const },
       instructions: INSTRUCTIONS,
-      // Sia voce sia testo: la chat scrive quello che l'avatar dice.
-      outputModalities: ["audio" as const, "text" as const],
-      // E anche quello che dici tu: senza, in chat comparirebbero solo le
-      // risposte e la conversazione risulterebbe a meta'.
-      inputAudioTranscription: { model: transcription, language: "it" },
-      outputAudioTranscription: { model: transcription, language: "it" },
-    }),
-    [voice, transcription],
-  );
+    };
+
+    // La trascrizione si chiede solo ai modelli che la reggono. La doc del
+    // Gateway lo dice dei Grok Voice: "supports speech-to-speech only, so it
+    // does not handle transcription or translation" — e chiedergliela lo
+    // faceva smettere di parlare del tutto.
+    if (!modelId.startsWith("xai/grok-voice")) {
+      return {
+        ...base,
+        // Sia voce sia testo: la chat scrive quello che l'avatar dice.
+        outputModalities: ["audio" as const, "text" as const],
+        // E anche quello che dici tu, altrimenti la conversazione in chat
+        // risulterebbe a meta'.
+        inputAudioTranscription: { model: transcription, language: "it" },
+        outputAudioTranscription: { model: transcription, language: "it" },
+      };
+    }
+
+    return base;
+  }, [voice, transcription, modelId]);
 
   const realtime = useRealtime({
     model,

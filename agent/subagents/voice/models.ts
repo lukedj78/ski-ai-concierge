@@ -12,8 +12,17 @@
  * gettone comunica al browser quale modello usare.
  */
 export const voiceModels = {
-  /** Speech-to-speech: un salto solo, latenza da conversazione. */
-  realtime: process.env.REALTIME_MODEL ?? "xai/grok-voice-think-fast-2.0",
+  /**
+   * Speech-to-speech: un salto solo, latenza da conversazione.
+   *
+   * Il modello OpenAI e' il predefinito perche' regge la trascrizione, che
+   * serve a scrivere in chat sia quello che dice il cliente sia quello che
+   * risponde l'avatar. La doc del Gateway e' esplicita sui Grok Voice:
+   * "supports speech-to-speech only, so it does not handle transcription or
+   * translation" — con quelli la conversazione funziona, ma la chat resta
+   * muta.
+   */
+  realtime: process.env.REALTIME_MODEL ?? "openai/gpt-realtime-2.1",
   realtimeVoice: process.env.REALTIME_VOICE ?? "alloy",
 
   /**

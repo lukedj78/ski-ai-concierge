@@ -8,6 +8,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useEveAgent } from "eve/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AvatarController } from "@/components/avatar/AvatarController";
+import {
+  CLOSED_MOUTH,
+  type VisemeWeights,
+  visemesFromSamples,
+} from "@/components/avatar/animations/lipSync";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { VoiceStatus } from "@/components/voice/VoiceStatus";
 import { Button } from "@/components/ui/button";
@@ -25,6 +30,12 @@ import { cn } from "@/lib/utils";
  * Il ciclo di vita e' quello di un assistente da banco: entri, ti saluta,
  * accendi il microfono quando vuoi parlare e lo spegni quando hai finito.
  */
+
+/**
+ * Frequenza di campionamento della sessione vocale. Serve anche all'analisi
+ * delle formanti: sbagliarla sposta tutte le frequenze e la vocale stimata.
+ */
+const AUDIO_SAMPLE_RATE = 24_000;
 
 export type ConciergeShellProps = {
   /** Identificativo Gateway del modello vocale, deciso dal sub-agente voce. */
@@ -44,10 +55,13 @@ export function ConciergeShell({
   avatarUrl,
 }: ConciergeShellProps) {
   const [notice, setNotice] = useState<string | null>(null);
-  const [amplitude, setAmplitude] = useState(0);
+  const [mouth, setMouth] = useState<VisemeWeights>(CLOSED_MOUTH);
   const [micOn, setMicOn] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
+  // Quando e' arrivato l'ultimo chunk audio: `isPlaying` puo' restare falso
+  // nelle pause fra un chunk e l'altro, e la bocca si chiuderebbe a scatti.
+  const [lastAudioAt, setLastAudioAt] = useState(0);
   const greeted = useRef(false);
   const askResolver = useRef<{
     resolve: (text: string) => void;
@@ -131,6 +145,7 @@ export function ConciergeShell({
 
   const realtime = useRealtime({
     model,
+    sampleRate: AUDIO_SAMPLE_RATE,
     api: { token: "/api/realtime/token" },
     sessionConfig,
     async onToolCall({ toolCall }) {
@@ -153,10 +168,12 @@ export function ConciergeShell({
       // dai chunk PCM16 in arrivo, che sono lo stesso audio un istante prima
       // che si senta.
       if (event.type !== "audio-delta") return;
+      // Dai campioni alle formanti, dalle formanti ai visemi: e' qui che il
+      // lip sync smette di essere un apri-e-chiudi e diventa una bocca che
+      // pronuncia le vocali che si sentono.
       const samples = decodeRealtimeAudio(event.delta);
-      let sum = 0;
-      for (const sample of samples) sum += sample * sample;
-      setAmplitude(Math.sqrt(sum / Math.max(1, samples.length)));
+      setMouth(visemesFromSamples(samples, AUDIO_SAMPLE_RATE).weights);
+      setLastAudioAt(Date.now());
     },
     onError(error) {
       setNotice(error.message);
@@ -188,7 +205,11 @@ export function ConciergeShell({
 
   // A fine riproduzione la bocca torna chiusa.
   useEffect(() => {
-    if (!isPlaying) setAmplitude(0);
+    if (isPlaying) return;
+    // A fine riproduzione la bocca torna chiusa, ma non subito: si aspetta la
+    // finestra di grazia, altrimenti si chiude fra un chunk e il successivo.
+    const timer = setTimeout(() => setMouth(CLOSED_MOUTH), 450);
+    return () => clearTimeout(timer);
   }, [isPlaying]);
 
   // Il microfono si spegne comunque quando si lascia la pagina.
@@ -226,7 +247,8 @@ export function ConciergeShell({
     () =>
       messages.map((message) => ({
         id: message.id,
-        role: message.role === "user" ? ("user" as const) : ("assistant" as const),
+        role:
+          message.role === "user" ? ("user" as const) : ("assistant" as const),
         parts: [
           {
             type: "text" as const,
@@ -240,7 +262,11 @@ export function ConciergeShell({
     [messages],
   );
 
-  const avatarState = isPlaying
+  // Sta parlando se il hook lo dice o se l'audio e' arrivato da poco: i due
+  // segnali insieme coprono anche le pause fra i chunk.
+  const speakingNow = isPlaying || Date.now() - lastAudioAt < 400;
+
+  const avatarState = speakingNow
     ? ("speaking" as const)
     : micOn && isCapturing
       ? ("listening" as const)
@@ -256,7 +282,7 @@ export function ConciergeShell({
             events={agent.events}
             listening={avatarState === "listening"}
             speaking={avatarState === "speaking"}
-            amplitude={amplitude}
+            visemes={mouth}
             vrmUrl={avatarUrl}
           />
         </div>

@@ -157,7 +157,8 @@ export default defineTool({
 
       const missingMem: string[] = [];
       if (!ski) missingMem.push("sci del livello e dello stile richiesti");
-      if (!input.shoeSizeEu) missingMem.push("numero di scarpa per gli scarponi");
+      if (!input.shoeSizeEu)
+        missingMem.push("numero di scarpa per gli scarponi");
 
       return {
         profile: {
@@ -205,12 +206,11 @@ export default defineTool({
       .select()
       .from(equipment)
       .where(
-        and(
-          eq(equipment.category, "poles"),
-          eq(equipment.status, "available"),
-        ),
+        and(eq(equipment.category, "poles"), eq(equipment.status, "available")),
       )
-      .orderBy(sql`abs(${equipment.lengthCm} - ${Math.round(input.heightCm * 0.68)})`)
+      .orderBy(
+        sql`abs(${equipment.lengthCm} - ${Math.round(input.heightCm * 0.68)})`,
+      )
       .limit(1);
 
     const mondopoint = input.shoeSizeEu

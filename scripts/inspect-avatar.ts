@@ -95,7 +95,9 @@ console.log(`Ossa           ${joints > 0 ? joints : "nessuno scheletro"}`);
 console.log(
   `Osso testa     ${headBone ? `si' (${headBone})` : "assente — si ruotera' tutto il modello"}`,
 );
-console.log(`\nMorph target   ${targetNames.size} su ${meshesWithTargets} mesh`);
+console.log(
+  `\nMorph target   ${targetNames.size} su ${meshesWithTargets} mesh`,
+);
 
 if (targetNames.size === 0) {
   console.log(

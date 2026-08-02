@@ -109,12 +109,8 @@
           "name": "bookings_user_id_users_id_fk",
           "tableFrom": "bookings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -175,12 +171,8 @@
           "name": "conversations_user_id_users_id_fk",
           "tableFrom": "conversations",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -452,12 +444,8 @@
           "name": "messages_conversation_id_conversations_id_fk",
           "tableFrom": "messages",
           "tableTo": "conversations",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conversation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -676,12 +664,8 @@
           "name": "rentals_booking_id_bookings_id_fk",
           "tableFrom": "rentals",
           "tableTo": "bookings",
-          "columnsFrom": [
-            "booking_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["booking_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -689,12 +673,8 @@
           "name": "rentals_equipment_id_equipment_id_fk",
           "tableFrom": "rentals",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -777,59 +757,32 @@
     "public.booking_status": {
       "name": "booking_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "confirmed",
-        "cancelled"
-      ]
+      "values": ["pending", "confirmed", "cancelled"]
     },
     "public.equipment_category": {
       "name": "equipment_category",
       "schema": "public",
-      "values": [
-        "skis",
-        "snowboard",
-        "boots",
-        "poles",
-        "helmet"
-      ]
+      "values": ["skis", "snowboard", "boots", "poles", "helmet"]
     },
     "public.equipment_status": {
       "name": "equipment_status",
       "schema": "public",
-      "values": [
-        "available",
-        "maintenance",
-        "retired"
-      ]
+      "values": ["available", "maintenance", "retired"]
     },
     "public.message_role": {
       "name": "message_role",
       "schema": "public",
-      "values": [
-        "user",
-        "assistant",
-        "system"
-      ]
+      "values": ["user", "assistant", "system"]
     },
     "public.ski_style": {
       "name": "ski_style",
       "schema": "public",
-      "values": [
-        "piste",
-        "all_mountain",
-        "freeride"
-      ]
+      "values": ["piste", "all_mountain", "freeride"]
     },
     "public.skier_level": {
       "name": "skier_level",
       "schema": "public",
-      "values": [
-        "beginner",
-        "intermediate",
-        "advanced",
-        "expert"
-      ]
+      "values": ["beginner", "intermediate", "advanced", "expert"]
     }
   },
   "schemas": {},

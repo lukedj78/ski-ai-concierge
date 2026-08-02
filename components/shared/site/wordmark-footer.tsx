@@ -56,7 +56,9 @@ export function WordmarkFooter() {
 
         <div className="flex flex-col gap-2 border-t border-outline pt-6 font-[family-name:var(--font-jetbrains-mono)] text-[11px] uppercase tracking-wide text-on-surface-variant sm:flex-row sm:justify-between">
           <span>© 2026 Rifugio Sport · Val di Fassa, Trentino</span>
-          <span>Generato da design-md-to-app a partire da .workflow/DESIGN.md</span>
+          <span>
+            Generato da design-md-to-app a partire da .workflow/DESIGN.md
+          </span>
         </div>
       </div>
     </footer>

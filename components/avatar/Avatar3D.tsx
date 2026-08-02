@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  type VRM,
-  VRMLoaderPlugin,
-  VRMUtils,
-} from "@pixiv/three-vrm";
+import { type VRM, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import { Box3, type Group, type Mesh, type Object3D, Vector3 } from "three";
@@ -12,18 +8,24 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { AvatarFallbackBoundary } from "./AvatarFallbackBoundary";
 import { idleMotion } from "./animations/idle";
 import {
+  CLOSED_MOUTH,
   damp,
-  mouthOpening,
+  dampWeights,
   VISEMES,
-  visemeWeights,
+  type VisemeWeights,
 } from "./animations/lipSync";
 import type { AvatarState } from "./AvatarState";
 
 export type Avatar3DProps = {
   /** L'unico dato che arriva dal mondo esterno, insieme all'ampiezza. */
   state: AvatarState;
-  /** Ampiezza dell'audio in riproduzione, fra 0 e 1. Muove la bocca. */
+  /** Ampiezza dell'audio in riproduzione, fra 0 e 1. */
   amplitude?: number;
+  /**
+   * I pesi dei visemi stimati dalle formanti: dicono *quale* vocale, non solo
+   * quanto e' aperta la bocca.
+   */
+  visemes?: VisemeWeights;
   /** URL del modello VRM. `null` fa scattare il segnaposto procedurale. */
   vrmUrl: string | null;
 };
@@ -35,8 +37,16 @@ export type Avatar3DProps = {
  * uno stato e un'ampiezza e li mette in scena. Se un giorno l'orchestratore
  * cambiasse, questo file non se ne accorgerebbe.
  */
-export function Avatar3D({ state, amplitude = 0, vrmUrl }: Avatar3DProps) {
-  const fallback = <PlaceholderFigure state={state} amplitude={amplitude} />;
+export function Avatar3D({
+  state,
+  amplitude = 0,
+  visemes,
+  vrmUrl,
+}: Avatar3DProps) {
+  const mouth = visemes ?? CLOSED_MOUTH;
+  const fallback = (
+    <PlaceholderFigure state={state} amplitude={amplitude} mouth={mouth} />
+  );
 
   if (!vrmUrl) return fallback;
 
@@ -49,9 +59,9 @@ export function Avatar3D({ state, amplitude = 0, vrmUrl }: Avatar3DProps) {
   return (
     <AvatarFallbackBoundary fallback={fallback}>
       {isVrm ? (
-        <VrmFigure url={vrmUrl} state={state} amplitude={amplitude} />
+        <VrmFigure url={vrmUrl} state={state} mouth={mouth} />
       ) : (
-        <GlbFigure url={vrmUrl} state={state} amplitude={amplitude} />
+        <GlbFigure url={vrmUrl} state={state} mouth={mouth} />
       )}
     </AvatarFallbackBoundary>
   );
@@ -60,11 +70,11 @@ export function Avatar3D({ state, amplitude = 0, vrmUrl }: Avatar3DProps) {
 function VrmFigure({
   url,
   state,
-  amplitude,
+  mouth,
 }: {
   url: string;
   state: AvatarState;
-  amplitude: number;
+  mouth: VisemeWeights;
 }) {
   const gltf = useLoader(GLTFLoader, url, (loader) => {
     loader.register((parser) => new VRMLoaderPlugin(parser));
@@ -80,7 +90,7 @@ function VrmFigure({
     return loaded;
   }, [gltf]);
 
-  const opening = useRef(0);
+  const smoothed = useRef<VisemeWeights>({ ...CLOSED_MOUTH });
 
   useFrame((_, delta) => {
     if (!vrm) return;
@@ -95,14 +105,14 @@ function VrmFigure({
     }
     vrm.scene.position.y = motion.breath;
 
-    // La bocca segue l'audio solo mentre parla: in ascolto o in attesa
-    // un'ampiezza residua la farebbe muovere a vuoto.
-    const target = state === "speaking" ? mouthOpening(amplitude) : 0;
-    opening.current = damp(opening.current, target);
+    // La bocca segue l'audio solo mentre parla: in ascolto o in attesa i pesi
+    // residui la farebbero muovere a vuoto.
+    const target = state === "speaking" ? mouth : CLOSED_MOUTH;
+    smoothed.current = dampWeights(smoothed.current, target);
 
-    const weights = visemeWeights(opening.current);
+    // I nomi dei visemi VRM coincidono con i nostri.
     for (const viseme of VISEMES) {
-      vrm.expressionManager?.setValue(viseme, weights[viseme]);
+      vrm.expressionManager?.setValue(viseme, smoothed.current[viseme]);
     }
     // Un accenno di sorriso quando ascolta: e' il segnale che sta ricevendo.
     vrm.expressionManager?.setValue(
@@ -125,17 +135,26 @@ function VrmFigure({
  * Avaturn e la maggior parte delle pipeline di avatar fotorealistici. Se il
  * modello ne ha solo una parte, si usa quello che c'e' — non si rompe niente.
  */
+/** Dai nostri visemi a quelli Oculus, che sono lo standard nei GLB. */
+const OCULUS_VISEME: Record<(typeof VISEMES)[number], string> = {
+  aa: "viseme_aa",
+  ih: "viseme_I",
+  ou: "viseme_U",
+  ee: "viseme_E",
+  oh: "viseme_O",
+};
+
 function GlbFigure({
   url,
   state,
-  amplitude,
+  mouth,
 }: {
   url: string;
   state: AvatarState;
-  amplitude: number;
+  mouth: VisemeWeights;
 }) {
   const gltf = useLoader(GLTFLoader, url);
-  const opening = useRef(0);
+  const smoothed = useRef<VisemeWeights>({ ...CLOSED_MOUTH });
 
   const rig = useMemo(() => {
     const morphMeshes: Mesh[] = [];
@@ -237,23 +256,30 @@ function GlbFigure({
       gltf.scene.rotation.x = motion.headPitch;
     }
 
-    const target = state === "speaking" ? mouthOpening(amplitude) : 0;
-    opening.current = damp(opening.current, target);
-    const weights = visemeWeights(opening.current);
+    const target = state === "speaking" ? mouth : CLOSED_MOUTH;
+    smoothed.current = dampWeights(smoothed.current, target);
+
+    // L'apertura complessiva e' la somma dei visemi: serve alla mandibola e ai
+    // modelli che hanno solo un blendshape generico.
+    const opening = VISEMES.reduce(
+      (sum, viseme) => sum + smoothed.current[viseme],
+      0,
+    );
 
     if (rig.jawBone) {
       // ~14 gradi a bocca spalancata: oltre, la mandibola si stacca dal viso.
-      rig.jawBone.rotation.x = rig.jawRestX + opening.current * 0.25;
+      rig.jawBone.rotation.x = rig.jawRestX + opening * 0.25;
     } else if (rig.discovered) {
-      setMorph(rig.discovered, opening.current);
+      setMorph(rig.discovered, opening);
     } else {
-      // Visemi Oculus, quando ci sono.
-      setMorph("viseme_aa", weights.aa);
-      setMorph("viseme_I", weights.ih);
-      setMorph("viseme_O", weights.ou);
-      // ARKit: la mandibola apre la bocca anche sui modelli senza visemi.
-      setMorph("jawOpen", opening.current * 0.6);
-      setMorph("mouthOpen", opening.current * 0.5);
+      // Visemi Oculus: uno per vocale, e' qui che il lip sync si vede.
+      for (const viseme of VISEMES) {
+        setMorph(OCULUS_VISEME[viseme], smoothed.current[viseme]);
+      }
+      // ARKit: la mandibola accompagna, e apre la bocca anche sui modelli che
+      // hanno i blendshape ARKit ma non i visemi.
+      setMorph("jawOpen", opening * 0.5);
+      setMorph("mouthOpen", opening * 0.4);
       // Un accenno di sorriso mentre ascolta.
       const smile = state === "listening" ? 0.3 : 0.1;
       setMorph("mouthSmileLeft", smile);
@@ -278,14 +304,17 @@ function GlbFigure({
 function PlaceholderFigure({
   state,
   amplitude,
+  mouth,
 }: {
   state: AvatarState;
   amplitude: number;
+  mouth: VisemeWeights;
 }) {
   const group = useRef<Group>(null);
   const head = useRef<Group>(null);
-  const mouth = useRef<Mesh>(null);
+  const mouthRef = useRef<Mesh>(null);
   const opening = useRef(0);
+  const widthRef = useRef(1);
 
   useFrame(() => {
     const time = performance.now() / 1000;
@@ -297,16 +326,23 @@ function PlaceholderFigure({
       head.current.rotation.x = motion.headPitch;
     }
 
-    const target = state === "speaking" ? mouthOpening(amplitude) : 0;
-    opening.current = damp(opening.current, target);
-    if (mouth.current) {
-      // La bocca si apre in altezza e si stringe appena in larghezza: e' cosi'
-      // che si muove una bocca vera, non come una feritoia che si allarga.
-      mouth.current.scale.set(
-        1 - opening.current * 0.2,
-        0.3 + opening.current * 2.2,
-        1,
-      );
+    // Anche la figura disegnata segue i visemi: la "a" apre, la "i" allarga,
+    // la "u" arrotonda. Non e' un viso vero, ma non e' nemmeno una feritoia
+    // che va su e giu'.
+    const height =
+      mouth.aa * 2.6 +
+      mouth.oh * 1.8 +
+      mouth.ee * 1.2 +
+      mouth.ou * 1.4 +
+      mouth.ih * 0.8;
+    const width =
+      1 + mouth.ee * 0.5 + mouth.ih * 0.6 - mouth.ou * 0.4 - mouth.oh * 0.25;
+
+    opening.current = damp(opening.current, state === "speaking" ? height : 0);
+    widthRef.current = damp(widthRef.current, state === "speaking" ? width : 1);
+
+    if (mouthRef.current) {
+      mouthRef.current.scale.set(widthRef.current, 0.3 + opening.current, 1);
     }
   });
 
@@ -440,7 +476,7 @@ function PlaceholderFigure({
         </mesh>
 
         {/* Bocca: si apre con l'audio */}
-        <mesh ref={mouth} position={[0, -0.145, 0.205]} scale={[1, 0.3, 1]}>
+        <mesh ref={mouthRef} position={[0, -0.145, 0.205]} scale={[1, 0.3, 1]}>
           <capsuleGeometry args={[0.055, 0.03, 8, 20]} />
           <meshStandardMaterial color="#8c4a49" roughness={0.6} />
         </mesh>

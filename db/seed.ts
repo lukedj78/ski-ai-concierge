@@ -16,12 +16,7 @@ import { embedMany } from "ai";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import {
-  equipment,
-  knowledgeDocuments,
-  products,
-  rentalRates,
-} from "./schema";
+import { equipment, knowledgeDocuments, products, rentalRates } from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -154,7 +149,12 @@ function buildEquipment() {
         model: boot.model,
         mondopoint,
         sizeLabel: `MP ${mondopoint}`,
-        level: boot.flex >= 100 ? "advanced" : boot.flex >= 85 ? "intermediate" : "beginner",
+        level:
+          boot.flex >= 100
+            ? "advanced"
+            : boot.flex >= 85
+              ? "intermediate"
+              : "beginner",
         status: "available",
         notes: `Flex ${boot.flex}`,
       });
@@ -195,28 +195,175 @@ function buildEquipment() {
 
 const RATES: (typeof rentalRates.$inferInsert)[] = [
   // Sci: il prezzo per giorno scende man mano che la durata cresce.
-  { category: "skis", level: "beginner", minDays: 1, pricePerDayCents: 2200, depositCents: 15000, insurancePerDayCents: 400 },
-  { category: "skis", level: "beginner", minDays: 3, pricePerDayCents: 1900, depositCents: 15000, insurancePerDayCents: 400 },
-  { category: "skis", level: "beginner", minDays: 6, pricePerDayCents: 1600, depositCents: 15000, insurancePerDayCents: 400 },
-  { category: "skis", level: "intermediate", minDays: 1, pricePerDayCents: 2900, depositCents: 20000, insurancePerDayCents: 500 },
-  { category: "skis", level: "intermediate", minDays: 3, pricePerDayCents: 2500, depositCents: 20000, insurancePerDayCents: 500 },
-  { category: "skis", level: "intermediate", minDays: 6, pricePerDayCents: 2100, depositCents: 20000, insurancePerDayCents: 500 },
-  { category: "skis", level: "advanced", minDays: 1, pricePerDayCents: 3600, depositCents: 30000, insurancePerDayCents: 600 },
-  { category: "skis", level: "advanced", minDays: 3, pricePerDayCents: 3100, depositCents: 30000, insurancePerDayCents: 600 },
-  { category: "skis", level: "advanced", minDays: 6, pricePerDayCents: 2600, depositCents: 30000, insurancePerDayCents: 600 },
-  { category: "skis", level: "expert", minDays: 1, pricePerDayCents: 4400, depositCents: 40000, insurancePerDayCents: 800 },
-  { category: "skis", level: "expert", minDays: 3, pricePerDayCents: 3800, depositCents: 40000, insurancePerDayCents: 800 },
-  { category: "skis", level: "expert", minDays: 6, pricePerDayCents: 3200, depositCents: 40000, insurancePerDayCents: 800 },
+  {
+    category: "skis",
+    level: "beginner",
+    minDays: 1,
+    pricePerDayCents: 2200,
+    depositCents: 15000,
+    insurancePerDayCents: 400,
+  },
+  {
+    category: "skis",
+    level: "beginner",
+    minDays: 3,
+    pricePerDayCents: 1900,
+    depositCents: 15000,
+    insurancePerDayCents: 400,
+  },
+  {
+    category: "skis",
+    level: "beginner",
+    minDays: 6,
+    pricePerDayCents: 1600,
+    depositCents: 15000,
+    insurancePerDayCents: 400,
+  },
+  {
+    category: "skis",
+    level: "intermediate",
+    minDays: 1,
+    pricePerDayCents: 2900,
+    depositCents: 20000,
+    insurancePerDayCents: 500,
+  },
+  {
+    category: "skis",
+    level: "intermediate",
+    minDays: 3,
+    pricePerDayCents: 2500,
+    depositCents: 20000,
+    insurancePerDayCents: 500,
+  },
+  {
+    category: "skis",
+    level: "intermediate",
+    minDays: 6,
+    pricePerDayCents: 2100,
+    depositCents: 20000,
+    insurancePerDayCents: 500,
+  },
+  {
+    category: "skis",
+    level: "advanced",
+    minDays: 1,
+    pricePerDayCents: 3600,
+    depositCents: 30000,
+    insurancePerDayCents: 600,
+  },
+  {
+    category: "skis",
+    level: "advanced",
+    minDays: 3,
+    pricePerDayCents: 3100,
+    depositCents: 30000,
+    insurancePerDayCents: 600,
+  },
+  {
+    category: "skis",
+    level: "advanced",
+    minDays: 6,
+    pricePerDayCents: 2600,
+    depositCents: 30000,
+    insurancePerDayCents: 600,
+  },
+  {
+    category: "skis",
+    level: "expert",
+    minDays: 1,
+    pricePerDayCents: 4400,
+    depositCents: 40000,
+    insurancePerDayCents: 800,
+  },
+  {
+    category: "skis",
+    level: "expert",
+    minDays: 3,
+    pricePerDayCents: 3800,
+    depositCents: 40000,
+    insurancePerDayCents: 800,
+  },
+  {
+    category: "skis",
+    level: "expert",
+    minDays: 6,
+    pricePerDayCents: 3200,
+    depositCents: 40000,
+    insurancePerDayCents: 800,
+  },
   // Scarponi, bastoncini e caschi non cambiano col livello.
-  { category: "boots", level: null, minDays: 1, pricePerDayCents: 1500, depositCents: 10000, insurancePerDayCents: 300 },
-  { category: "boots", level: null, minDays: 3, pricePerDayCents: 1300, depositCents: 10000, insurancePerDayCents: 300 },
-  { category: "boots", level: null, minDays: 6, pricePerDayCents: 1100, depositCents: 10000, insurancePerDayCents: 300 },
-  { category: "poles", level: null, minDays: 1, pricePerDayCents: 500, depositCents: 2000, insurancePerDayCents: 100 },
-  { category: "poles", level: null, minDays: 6, pricePerDayCents: 400, depositCents: 2000, insurancePerDayCents: 100 },
-  { category: "helmet", level: null, minDays: 1, pricePerDayCents: 700, depositCents: 3000, insurancePerDayCents: 100 },
-  { category: "helmet", level: null, minDays: 6, pricePerDayCents: 600, depositCents: 3000, insurancePerDayCents: 100 },
-  { category: "snowboard", level: null, minDays: 1, pricePerDayCents: 2800, depositCents: 20000, insurancePerDayCents: 500 },
-  { category: "snowboard", level: null, minDays: 6, pricePerDayCents: 2200, depositCents: 20000, insurancePerDayCents: 500 },
+  {
+    category: "boots",
+    level: null,
+    minDays: 1,
+    pricePerDayCents: 1500,
+    depositCents: 10000,
+    insurancePerDayCents: 300,
+  },
+  {
+    category: "boots",
+    level: null,
+    minDays: 3,
+    pricePerDayCents: 1300,
+    depositCents: 10000,
+    insurancePerDayCents: 300,
+  },
+  {
+    category: "boots",
+    level: null,
+    minDays: 6,
+    pricePerDayCents: 1100,
+    depositCents: 10000,
+    insurancePerDayCents: 300,
+  },
+  {
+    category: "poles",
+    level: null,
+    minDays: 1,
+    pricePerDayCents: 500,
+    depositCents: 2000,
+    insurancePerDayCents: 100,
+  },
+  {
+    category: "poles",
+    level: null,
+    minDays: 6,
+    pricePerDayCents: 400,
+    depositCents: 2000,
+    insurancePerDayCents: 100,
+  },
+  {
+    category: "helmet",
+    level: null,
+    minDays: 1,
+    pricePerDayCents: 700,
+    depositCents: 3000,
+    insurancePerDayCents: 100,
+  },
+  {
+    category: "helmet",
+    level: null,
+    minDays: 6,
+    pricePerDayCents: 600,
+    depositCents: 3000,
+    insurancePerDayCents: 100,
+  },
+  {
+    category: "snowboard",
+    level: null,
+    minDays: 1,
+    pricePerDayCents: 2800,
+    depositCents: 20000,
+    insurancePerDayCents: 500,
+  },
+  {
+    category: "snowboard",
+    level: null,
+    minDays: 6,
+    pricePerDayCents: 2200,
+    depositCents: 20000,
+    insurancePerDayCents: 500,
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -243,7 +390,8 @@ const PRODUCTS: (typeof products.$inferInsert)[] = [
     sizes: MONDOPOINTS.slice(4, 14),
     stock: 5,
     level: "expert",
-    description: "Flex 130, calzata stretta. Per chi scia veloce e sa cosa vuole.",
+    description:
+      "Flex 130, calzata stretta. Per chi scia veloce e sa cosa vuole.",
   },
   {
     category: "helmet",

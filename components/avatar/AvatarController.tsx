@@ -4,6 +4,7 @@ import type { MessageStreamEvent } from "eve/client";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar3D } from "./Avatar3D";
+import type { VisemeWeights } from "./animations/lipSync";
 import { AvatarCanvas } from "./AvatarCanvas";
 import { AVATAR_STATE_LABEL, avatarStateFromEvents } from "./AvatarState";
 
@@ -16,6 +17,8 @@ export type AvatarControllerProps = {
   speaking?: boolean;
   /** Ampiezza dell'audio in riproduzione, fra 0 e 1. */
   amplitude?: number;
+  /** I pesi dei visemi stimati dalle formanti dell'audio in arrivo. */
+  visemes?: VisemeWeights;
   /** URL del modello VRM, risolto dal server. */
   vrmUrl: string | null;
 };
@@ -32,6 +35,7 @@ export function AvatarController({
   listening = false,
   speaking = false,
   amplitude = 0,
+  visemes,
   vrmUrl,
 }: AvatarControllerProps) {
   const state = useMemo(
@@ -61,7 +65,12 @@ export function AvatarController({
       */}
       <div className="absolute inset-0">
         <AvatarCanvas>
-          <Avatar3D state={state} amplitude={amplitude} vrmUrl={vrmUrl} />
+          <Avatar3D
+            state={state}
+            amplitude={amplitude}
+            visemes={visemes}
+            vrmUrl={vrmUrl}
+          />
         </AvatarCanvas>
       </div>
       <Badge

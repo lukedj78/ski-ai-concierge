@@ -22,19 +22,14 @@
     {
       "skill": "prd-from-idea",
       "ran_at": "2026-08-02T13:49:31Z",
-      "outputs": [
-        "PROJECT.md",
-        "PRD.md"
-      ],
+      "outputs": ["PROJECT.md", "PRD.md"],
       "phase_before": "empty",
       "phase_after": "prd_drafted"
     },
     {
       "skill": "prd-to-tasks",
       "ran_at": "2026-08-02T13:51:45Z",
-      "outputs": [
-        "tasks.md"
-      ],
+      "outputs": ["tasks.md"],
       "phase_before": "prd_drafted",
       "phase_after": "tasks_split"
     }

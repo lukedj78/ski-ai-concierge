@@ -57,7 +57,9 @@ export default defineTool({
           if (wantedLength && item.lengthCm) {
             distance = Math.abs(item.lengthCm - wantedLength);
           } else if (wantedMondo && item.mondopoint) {
-            distance = Math.abs(Number.parseFloat(item.mondopoint) - wantedMondo);
+            distance = Math.abs(
+              Number.parseFloat(item.mondopoint) - wantedMondo,
+            );
           }
           return { item, distance };
         })

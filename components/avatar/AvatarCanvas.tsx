@@ -48,7 +48,11 @@ export function AvatarCanvas({ children }: { children: ReactNode }) {
       {/* Luce da neve: forte dall'alto, di rimbalzo dal basso. */}
       <ambientLight intensity={1.1} />
       <directionalLight position={[2, 3, 2]} intensity={1.4} />
-      <directionalLight position={[-2, -1, 1]} intensity={0.35} color="#bcd8ea" />
+      <directionalLight
+        position={[-2, -1, 1]}
+        intensity={0.35}
+        color="#bcd8ea"
+      />
       <Suspense fallback={null}>{children}</Suspense>
     </Canvas>
   );
@@ -58,9 +62,7 @@ function detectWebGL(): boolean {
   if (typeof window === "undefined") return false;
   try {
     const canvas = document.createElement("canvas");
-    return Boolean(
-      canvas.getContext("webgl2") ?? canvas.getContext("webgl"),
-    );
+    return Boolean(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
   } catch {
     return false;
   }

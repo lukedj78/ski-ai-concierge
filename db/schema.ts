@@ -175,9 +175,7 @@ export const rentalRates = pgTable("rental_rates", {
   minDays: integer("min_days").notNull(),
   pricePerDayCents: integer("price_per_day_cents").notNull(),
   depositCents: integer("deposit_cents").notNull().default(0),
-  insurancePerDayCents: integer("insurance_per_day_cents")
-    .notNull()
-    .default(0),
+  insurancePerDayCents: integer("insurance_per_day_cents").notNull().default(0),
 });
 
 // ---------------------------------------------------------------------------

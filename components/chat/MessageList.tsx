@@ -4,11 +4,7 @@ import type { EveMessage } from "eve/client";
 import { Streamdown } from "streamdown";
 import { Bubble, BubbleContent, BubbleGroup } from "@/components/ui/bubble";
 import { Marker } from "@/components/ui/marker";
-import {
-  Message,
-  MessageContent,
-  MessageGroup,
-} from "@/components/ui/message";
+import { Message, MessageContent, MessageGroup } from "@/components/ui/message";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -105,7 +101,9 @@ function MessageRow({ message }: { message: EveMessage }) {
                   key={`${message.id}-tool-${index}`}
                   className="font-[family-name:var(--font-jetbrains-mono)] text-[12px]"
                 >
-                  {part.state === "output-available" ? `${label} — fatto` : label}
+                  {part.state === "output-available"
+                    ? `${label} — fatto`
+                    : label}
                 </Marker>
               );
             }

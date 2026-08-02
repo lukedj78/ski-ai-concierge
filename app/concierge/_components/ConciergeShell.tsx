@@ -34,6 +34,18 @@ import { cn } from "@/lib/utils";
  */
 const AUDIO_SAMPLE_RATE = 24_000;
 
+/**
+ * Il contesto con cui la voce interroga il negozio.
+ *
+ * Chi chiede non e' il cliente ma un altro modello, che dira' lui la risposta
+ * ad alta voce: qui serve la sostanza, subito, senza preamboli e senza
+ * chiedere niente. Ogni giro di modello in piu' e' un secondo di silenzio in
+ * conversazione.
+ */
+const BRIDGE_CONTEXT = `Questa domanda arriva dalla sessione vocale, non dal cliente: chi la riceve la leggera' ad alta voce.
+
+Rispondi con la sostanza e basta: niente saluti, niente "un attimo controllo", nessuna domanda di rimando. Se servono i tool chiamali subito, senza annunciarlo. Al massimo tre frasi, con i numeri esatti che tornano dai tool.`;
+
 export type ConciergeShellProps = {
   /** Identificativo Gateway del modello vocale, deciso dal sub-agente voce. */
   model: string;
@@ -91,6 +103,8 @@ export function ConciergeShell({
     resolve: (text: string) => void;
     reject: (error: Error) => void;
   } | null>(null);
+  /** I blocchi di testo del turno in corso, da unire alla fine. */
+  const parts = useRef<string[]>([]);
 
   // La sessione eve: e' il cervello. Il modello vocale la interroga tramite il
   // suo unico strumento; qui si aspetta la risposta e la si restituisce.
@@ -118,9 +132,22 @@ export function ConciergeShell({
       const waiting = askResolver.current;
       if (!waiting) return;
 
+      // I blocchi di testo si accumulano: un turno puo' produrne piu' di uno,
+      // per esempio un "un attimo, controllo" prima di chiamare i tool.
+      // Chiudere sul primo significava rispondere con quello, perdere i tool
+      // che arrivano dopo, e lasciare il turno in corso a bloccare il
+      // successivo.
       if (event.type === "message.completed") {
+        if (event.data.message) parts.current.push(event.data.message);
+        return;
+      }
+
+      // Il turno e' finito: ora si risponde, con tutto quello che ha detto.
+      if (event.type === "turn.completed") {
         askResolver.current = null;
-        waiting.resolve(event.data.message ?? "");
+        const text = parts.current.join(" ").trim();
+        parts.current = [];
+        waiting.resolve(text);
         return;
       }
 
@@ -128,6 +155,7 @@ export function ConciergeShell({
       // restare appeso: altrimenti la conversazione si ferma in silenzio.
       if (event.type === "turn.failed") {
         askResolver.current = null;
+        parts.current = [];
         waiting.reject(new Error(event.data.message));
       }
     },
@@ -158,6 +186,7 @@ export function ConciergeShell({
 
   function runAsk(question: string): Promise<string> {
     setThinking({ question, tools: [] });
+    parts.current = [];
     return new Promise<string>((resolve, reject) => {
       const timer = setTimeout(() => {
         if (askResolver.current?.resolve !== resolve) return;
@@ -179,12 +208,18 @@ export function ConciergeShell({
         },
       };
 
-      agent.send({ message: question }).catch((error: unknown) => {
-        clearTimeout(timer);
-        askResolver.current = null;
-        setThinking(null);
-        reject(error instanceof Error ? error : new Error(String(error)));
-      });
+      // Il contesto del turno accorcia la catena: senza, l'agente prima
+      // annuncia che sta per controllare, poi carica la skill, poi chiama i
+      // tool — tre giri di modello per una domanda sola, che a voce sono
+      // secondi di silenzio.
+      agent
+        .send({ message: question, clientContext: BRIDGE_CONTEXT })
+        .catch((error: unknown) => {
+          clearTimeout(timer);
+          askResolver.current = null;
+          setThinking(null);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        });
     });
   }
 

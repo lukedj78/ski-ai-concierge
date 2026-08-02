@@ -80,8 +80,13 @@ export function MessageList({
                 <div className="space-y-1.5 py-1">
                   <Marker className="gap-2">
                     <Spinner className="size-3" />
-                    controllo in negozio
+                    il concierge interroga il negozio
                   </Marker>
+                  {SHOW_TOOLS ? (
+                    <Marker className="ml-4 text-[12px] italic">
+                      «{thinking.question}»
+                    </Marker>
+                  ) : null}
                   {SHOW_TOOLS
                     ? thinking.tools.map((tool, index) => (
                         <Marker

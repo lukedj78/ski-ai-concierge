@@ -77,60 +77,61 @@ export function CreditMeter({ refreshKey }: CreditMeterProps) {
           : "Spesa di questa conversazione e saldo residuo del Gateway."
       }
     >
-      <AnimatedUsd value={spent} /> · saldo <AnimatedUsd value={balance} />
+      <LiveUsd value={spent} showDelta /> · saldo <LiveUsd value={balance} />
     </span>
   );
 }
 
 /**
- * Una cifra che scorre fino al nuovo valore invece di saltarci.
+ * Una cifra che resta vera e si fa notare quando cambia.
  *
- * Il salto e' breve — mezzo secondo — e serve a farsi notare: in una
- * conversazione a voce nessuno guarda la barra in basso, e un numero che si
- * muove per un attimo dice "e' appena successo qualcosa".
+ * Niente interpolazione: il valore salta a quello nuovo, perche' quello e' il
+ * costo reale e un numero che scorre racconterebbe una precisione che non
+ * abbiamo — il Gateway registra il consumo a scatti, non al secondo.
  *
- * Non e' un contatore in tempo reale, e non deve sembrarlo: il consumo il
- * Gateway lo registra a scatti, quindi qui si interpola solo fra due letture
- * vere.
+ * Ad animarsi e' il *cambio*: la cifra lampeggia per mezzo secondo, e accanto
+ * compare per un attimo quanto e' appena costato.
  */
-function AnimatedUsd({ value }: { value: number }) {
-  const node = useRef<HTMLSpanElement>(null);
-  const shown = useRef(value);
+function LiveUsd({
+  value,
+  showDelta = false,
+}: {
+  value: number;
+  showDelta?: boolean;
+}) {
+  const previous = useRef(value);
+  const [flash, setFlash] = useState(false);
+  const [delta, setDelta] = useState(0);
 
   useEffect(() => {
-    const element = node.current;
-    if (!element) return;
+    const change = value - previous.current;
+    previous.current = value;
+    if (Math.abs(change) < 0.0001) return;
 
-    const from = shown.current;
-    const delta = value - from;
-    if (Math.abs(delta) < 0.0001) {
-      element.textContent = formatUsd(value);
-      return;
-    }
-
-    const DURATION = 500;
-    const start = performance.now();
-    let frame = 0;
-
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - start) / DURATION);
-      // Decelerazione: parte svelta e si posa, invece di fermarsi di colpo.
-      const eased = 1 - (1 - progress) ** 3;
-      const current = from + delta * eased;
-      shown.current = current;
-      element.textContent = formatUsd(current);
-      if (progress < 1) frame = requestAnimationFrame(tick);
-    };
-
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    setDelta(change);
+    setFlash(true);
+    const timer = setTimeout(() => setFlash(false), 700);
+    return () => clearTimeout(timer);
   }, [value]);
 
-  // `tabular-nums`: senza, le cifre hanno larghezze diverse e il numero balla
-  // mentre scorre.
   return (
-    <span ref={node} className="tabular-nums">
-      {formatUsd(value)}
+    <span className="inline-flex items-baseline gap-1">
+      {/* `tabular-nums`: senza, le cifre hanno larghezze diverse e il numero
+          balla a ogni aggiornamento. */}
+      <span
+        className={cn(
+          "tabular-nums transition-[color,transform] duration-200",
+          flash && "scale-110 text-primary",
+        )}
+        style={{ transformOrigin: "left center" }}
+      >
+        {formatUsd(value)}
+      </span>
+      {showDelta && flash && delta > 0 ? (
+        <span className="tabular-nums text-[11px] text-primary">
+          +{formatUsd(delta).replace("$", "")}
+        </span>
+      ) : null}
     </span>
   );
 }

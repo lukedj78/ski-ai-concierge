@@ -55,13 +55,24 @@ export function ConciergeShell({
   avatarUrl,
 }: ConciergeShellProps) {
   const [notice, setNotice] = useState<string | null>(null);
-  const [mouth, setMouth] = useState<VisemeWeights>(CLOSED_MOUTH);
+  /**
+   * I pesi dei visemi vivono in un oggetto mutabile, non nello stato di React.
+   *
+   * L'audio arriva a blocchi ogni venti millisecondi: passare da `useState`
+   * significherebbe cinquanta render al secondo, e un'eccezione su un singolo
+   * blocco fermerebbe l'aggiornamento per tutto il resto della frase — la
+   * bocca si muove due o tre volte e poi resta ferma. L'avatar legge questo
+   * oggetto a ogni frame, che e' come si anima.
+   */
+  const mouth = useRef<VisemeWeights>({ ...CLOSED_MOUTH });
   const [micOn, setMicOn] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
-  // Quando e' arrivato l'ultimo chunk audio: `isPlaying` puo' restare falso
-  // nelle pause fra un chunk e l'altro, e la bocca si chiuderebbe a scatti.
-  const [lastAudioAt, setLastAudioAt] = useState(0);
+  // "Sta parlando" e' uno stato di React, ma cambia due volte per frase, non
+  // cinquanta al secondo: si accende al primo blocco audio e si spegne dopo un
+  // po' di silenzio.
+  const [voiceActive, setVoiceActive] = useState(false);
+  const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const greeted = useRef(false);
   const askResolver = useRef<{
     resolve: (text: string) => void;
@@ -168,12 +179,25 @@ export function ConciergeShell({
       // dai chunk PCM16 in arrivo, che sono lo stesso audio un istante prima
       // che si senta.
       if (event.type !== "audio-delta") return;
-      // Dai campioni alle formanti, dalle formanti ai visemi: e' qui che il
-      // lip sync smette di essere un apri-e-chiudi e diventa una bocca che
-      // pronuncia le vocali che si sentono.
-      const samples = decodeRealtimeAudio(event.delta);
-      setMouth(visemesFromSamples(samples, AUDIO_SAMPLE_RATE).weights);
-      setLastAudioAt(Date.now());
+
+      // Un blocco malformato non deve zittire tutti quelli dopo.
+      try {
+        // Dai campioni alle formanti, dalle formanti ai visemi: e' qui che il
+        // lip sync smette di essere un apri-e-chiudi e diventa una bocca che
+        // pronuncia le vocali che si sentono.
+        const samples = decodeRealtimeAudio(event.delta);
+        mouth.current = visemesFromSamples(samples, AUDIO_SAMPLE_RATE).weights;
+      } catch (error) {
+        console.warn("[voce] blocco audio non decodificabile", error);
+        return;
+      }
+
+      setVoiceActive(true);
+      if (silenceTimer.current) clearTimeout(silenceTimer.current);
+      silenceTimer.current = setTimeout(() => {
+        mouth.current = { ...CLOSED_MOUTH };
+        setVoiceActive(false);
+      }, 350);
     },
     onError(error) {
       setNotice(error.message);
@@ -204,13 +228,12 @@ export function ConciergeShell({
   }, []);
 
   // A fine riproduzione la bocca torna chiusa.
+  // Il conto alla rovescia del silenzio va fermato quando si lascia la pagina.
   useEffect(() => {
-    if (isPlaying) return;
-    // A fine riproduzione la bocca torna chiusa, ma non subito: si aspetta la
-    // finestra di grazia, altrimenti si chiude fra un chunk e il successivo.
-    const timer = setTimeout(() => setMouth(CLOSED_MOUTH), 450);
-    return () => clearTimeout(timer);
-  }, [isPlaying]);
+    return () => {
+      if (silenceTimer.current) clearTimeout(silenceTimer.current);
+    };
+  }, []);
 
   // Il microfono si spegne comunque quando si lascia la pagina.
   useEffect(() => {
@@ -262,9 +285,9 @@ export function ConciergeShell({
     [messages],
   );
 
-  // Sta parlando se il hook lo dice o se l'audio e' arrivato da poco: i due
-  // segnali insieme coprono anche le pause fra i chunk.
-  const speakingNow = isPlaying || Date.now() - lastAudioAt < 400;
+  // Sta parlando se il hook lo dice o se l'audio sta ancora arrivando: i due
+  // segnali insieme coprono anche le pause fra un blocco e l'altro.
+  const speakingNow = isPlaying || voiceActive;
 
   const avatarState = speakingNow
     ? ("speaking" as const)

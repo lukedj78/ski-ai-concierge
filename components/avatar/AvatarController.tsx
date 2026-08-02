@@ -17,8 +17,12 @@ export type AvatarControllerProps = {
   speaking?: boolean;
   /** Ampiezza dell'audio in riproduzione, fra 0 e 1. */
   amplitude?: number;
-  /** I pesi dei visemi stimati dalle formanti dell'audio in arrivo. */
-  visemes?: VisemeWeights;
+  /**
+   * Riferimento mutabile ai pesi dei visemi. E' un riferimento e non un
+   * valore perche' cambia cinquanta volte al secondo: passarlo come stato
+   * significherebbe altrettanti render.
+   */
+  visemes?: { current: VisemeWeights };
   /** URL del modello VRM, risolto dal server. */
   vrmUrl: string | null;
 };

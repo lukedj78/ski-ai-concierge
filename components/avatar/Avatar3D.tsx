@@ -22,10 +22,10 @@ export type Avatar3DProps = {
   /** Ampiezza dell'audio in riproduzione, fra 0 e 1. */
   amplitude?: number;
   /**
-   * I pesi dei visemi stimati dalle formanti: dicono *quale* vocale, non solo
-   * quanto e' aperta la bocca.
+   * Riferimento mutabile ai pesi dei visemi, stimati dalle formanti: dicono
+   * *quale* vocale, non solo quanto e' aperta la bocca. Si legge a ogni frame.
    */
-  visemes?: VisemeWeights;
+  visemes?: { current: VisemeWeights };
   /** URL del modello VRM. `null` fa scattare il segnaposto procedurale. */
   vrmUrl: string | null;
 };
@@ -43,7 +43,7 @@ export function Avatar3D({
   visemes,
   vrmUrl,
 }: Avatar3DProps) {
-  const mouth = visemes ?? CLOSED_MOUTH;
+  const mouth = visemes ?? { current: CLOSED_MOUTH };
   const fallback = (
     <PlaceholderFigure state={state} amplitude={amplitude} mouth={mouth} />
   );
@@ -74,7 +74,7 @@ function VrmFigure({
 }: {
   url: string;
   state: AvatarState;
-  mouth: VisemeWeights;
+  mouth: { current: VisemeWeights };
 }) {
   const gltf = useLoader(GLTFLoader, url, (loader) => {
     loader.register((parser) => new VRMLoaderPlugin(parser));
@@ -107,7 +107,7 @@ function VrmFigure({
 
     // La bocca segue l'audio solo mentre parla: in ascolto o in attesa i pesi
     // residui la farebbero muovere a vuoto.
-    const target = state === "speaking" ? mouth : CLOSED_MOUTH;
+    const target = state === "speaking" ? mouth.current : CLOSED_MOUTH;
     smoothed.current = dampWeights(smoothed.current, target);
 
     // I nomi dei visemi VRM coincidono con i nostri.
@@ -151,7 +151,7 @@ function GlbFigure({
 }: {
   url: string;
   state: AvatarState;
-  mouth: VisemeWeights;
+  mouth: { current: VisemeWeights };
 }) {
   const gltf = useLoader(GLTFLoader, url);
   const smoothed = useRef<VisemeWeights>({ ...CLOSED_MOUTH });
@@ -256,7 +256,7 @@ function GlbFigure({
       gltf.scene.rotation.x = motion.headPitch;
     }
 
-    const target = state === "speaking" ? mouth : CLOSED_MOUTH;
+    const target = state === "speaking" ? mouth.current : CLOSED_MOUTH;
     smoothed.current = dampWeights(smoothed.current, target);
 
     // L'apertura complessiva e' la somma dei visemi: serve alla mandibola e ai
@@ -308,7 +308,7 @@ function PlaceholderFigure({
 }: {
   state: AvatarState;
   amplitude: number;
-  mouth: VisemeWeights;
+  mouth: { current: VisemeWeights };
 }) {
   const group = useRef<Group>(null);
   const head = useRef<Group>(null);
@@ -329,14 +329,19 @@ function PlaceholderFigure({
     // Anche la figura disegnata segue i visemi: la "a" apre, la "i" allarga,
     // la "u" arrotonda. Non e' un viso vero, ma non e' nemmeno una feritoia
     // che va su e giu'.
+    const weights = mouth.current;
     const height =
-      mouth.aa * 2.6 +
-      mouth.oh * 1.8 +
-      mouth.ee * 1.2 +
-      mouth.ou * 1.4 +
-      mouth.ih * 0.8;
+      weights.aa * 2.6 +
+      weights.oh * 1.8 +
+      weights.ee * 1.2 +
+      weights.ou * 1.4 +
+      weights.ih * 0.8;
     const width =
-      1 + mouth.ee * 0.5 + mouth.ih * 0.6 - mouth.ou * 0.4 - mouth.oh * 0.25;
+      1 +
+      weights.ee * 0.5 +
+      weights.ih * 0.6 -
+      weights.ou * 0.4 -
+      weights.oh * 0.25;
 
     opening.current = damp(opening.current, state === "speaking" ? height : 0);
     widthRef.current = damp(widthRef.current, state === "speaking" ? width : 1);

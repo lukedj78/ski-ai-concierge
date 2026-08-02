@@ -3,7 +3,10 @@ import { ModeToggle } from "@/components/theme/mode-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-const LINKS = [{ href: "/concierge", label: "Concierge" }];
+const LINKS = [
+  { href: "/concierge", label: "Concierge" },
+  { href: "/doc", label: "Doc" },
+];
 
 /**
  * L'intestazione: nome del negozio a sinistra, stato a destra.

@@ -41,10 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Modello 3D scaricato con `pnpm avatar:fetch`: non si versiona,
-# perche' la licenza dipende da chi lo ha generato.
-public/avatar/*.glb
-public/avatar/*.vrm
+# Il modello dell'avatar e' versionato: vedi public/avatar/README.md.
 
 # eve
 .eve/

@@ -40,7 +40,7 @@ export type ConciergeShellProps = {
   voice: string;
   /** Modello di trascrizione, per far comparire in chat anche cio' che dici. */
   transcription: string;
-  /** URL del modello 3D, o `null` per la figura disegnata. */
+  /** URL del modello 3D. */
   avatarUrl: string | null;
 };
 

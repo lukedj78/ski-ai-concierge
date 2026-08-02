@@ -15,8 +15,6 @@ export type AvatarControllerProps = {
   listening?: boolean;
   /** L'audio della risposta e' in riproduzione. */
   speaking?: boolean;
-  /** Ampiezza dell'audio in riproduzione, fra 0 e 1. */
-  amplitude?: number;
   /**
    * Riferimento mutabile ai pesi dei visemi. E' un riferimento e non un
    * valore perche' cambia cinquanta volte al secondo: passarlo come stato
@@ -38,7 +36,6 @@ export function AvatarController({
   events,
   listening = false,
   speaking = false,
-  amplitude = 0,
   visemes,
   vrmUrl,
 }: AvatarControllerProps) {
@@ -71,8 +68,7 @@ export function AvatarController({
         <AvatarCanvas>
           <Avatar3D
             state={state}
-            amplitude={amplitude}
-            visemes={visemes}
+              visemes={visemes}
             vrmUrl={vrmUrl}
           />
         </AvatarCanvas>

@@ -33,10 +33,14 @@ export function AvatarCanvas({ children }: { children: ReactNode }) {
 
   return (
     <Canvas
-      // La mezza figura si ottiene inquadrando, non tagliando la mesh: la
-      // camera sta all'altezza del petto e tiene dentro testa, spalle e busto,
-      // con un po' d'aria sopra la testa.
-      camera={{ position: [0, -0.4, 2.85], fov: 30 }}
+      // La mezza figura si ottiene inquadrando, non tagliando la mesh.
+      //
+      // I modelli riggati vengono allineati con l'osso della testa a quota
+      // zero (vedi Avatar3D). Con fov 30 e distanza 1.95 l'altezza visibile e'
+      // circa un metro: abbassando la camera a -0.34 la porzione inquadrata va
+      // da poco sopra la testa fino alla vita. Cambiare uno di questi tre
+      // numeri significa cambiare l'inquadratura, non la posa.
+      camera={{ position: [0, -0.34, 1.95], fov: 30 }}
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: true }}
       className="h-full w-full"

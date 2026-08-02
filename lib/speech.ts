@@ -1,5 +1,5 @@
 import { gateway } from "@ai-sdk/gateway";
-import { experimental_transcribe as transcribe } from "ai";
+import { generateSpeech, experimental_transcribe as transcribe } from "ai";
 
 /**
  * Voce: trascrizione e sintesi, entrambe attraverso il Vercel AI Gateway.
@@ -29,8 +29,6 @@ import { experimental_transcribe as transcribe } from "ai";
  * canary; l'endpoint REST e' documentato, stabile e fa la stessa cosa.
  */
 
-const SPEECH_ENDPOINT = "https://ai-gateway.vercel.sh/v4/ai/speech-model";
-
 /**
  * Errore di dominio: i modelli audio del Gateway sono in beta con rollout
  * graduale e possono non essere nel catalogo di un team. Chi chiama lo
@@ -56,15 +54,40 @@ function requireGatewayKey(): string {
   return key;
 }
 
-/** Da `data:audio/webm;base64,...` (o base64 nudo) ai byte. */
+/**
+ * Da data URL (o base64 nudo) ai byte.
+ *
+ * Attenzione ai parametri del media type: Chrome produce
+ * `data:audio/webm;codecs=opus;base64,...`, Safari `data:audio/mp4;base64,...`.
+ * Una regex che pretende `;base64,` subito dopo il tipo fallisce sul primo
+ * caso — e il ripiego "allora e' base64 nudo" finisce per decodificare anche
+ * il prefisso, producendo byte spazzatura e un errore fuorviante del
+ * provider. Qui si taglia sulla prima virgola, che nei data URL separa sempre
+ * l'intestazione dal contenuto.
+ */
 export function decodeAudioDataUrl(input: string): {
   bytes: Uint8Array;
   mediaType: string;
 } {
-  const match = /^data:([^;]+);base64,([\s\S]*)$/.exec(input);
-  const mediaType = match?.[1] ?? "audio/webm";
-  const base64 = match?.[2] ?? input;
-  return { bytes: Uint8Array.from(Buffer.from(base64, "base64")), mediaType };
+  let mediaType = "audio/webm";
+  let base64 = input;
+
+  if (input.startsWith("data:")) {
+    const comma = input.indexOf(",");
+    if (comma === -1) {
+      throw new VoiceUnavailableError("Data URL malformato: manca la virgola.");
+    }
+    const header = input.slice(5, comma);
+    base64 = input.slice(comma + 1);
+    // `audio/webm;codecs=opus;base64` → `audio/webm`
+    const declared = header.split(";")[0]?.trim();
+    if (declared) mediaType = declared;
+  }
+
+  return {
+    bytes: Uint8Array.from(Buffer.from(base64, "base64")),
+    mediaType,
+  };
 }
 
 export async function transcribeAudio(audioDataUrl: string): Promise<{
@@ -104,36 +127,33 @@ export async function synthesizeSpeech(text: string): Promise<{
   audioBase64: string;
   mediaType: string;
 }> {
-  const key = requireGatewayKey();
+  requireGatewayKey();
 
-  const response = await fetch(SPEECH_ENDPOINT, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${key}`,
-      "ai-model-id": process.env.VOICE_TTS_MODEL ?? "openai/tts-1",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
+  try {
+    const result = await generateSpeech({
+      model: gateway.speechModel(process.env.VOICE_TTS_MODEL ?? "openai/tts-1"),
       text,
       voice: process.env.VOICE_TTS_VOICE ?? "alloy",
       outputFormat: "mp3",
       language: "it",
-    }),
-  });
+    });
 
-  if (!response.ok) {
+    // I parametri non supportati dal modello arrivano come warning invece di
+    // far fallire la chiamata: vale la pena vederli nei log.
+    for (const warning of result.warnings) {
+      console.warn("[voce] sintesi, avviso dal provider:", warning);
+    }
+
+    return {
+      audioBase64: result.audio.base64,
+      mediaType: result.audio.mediaType,
+    };
+  } catch (error) {
+    console.error("[voce] sintesi fallita", error);
+    const detail = error instanceof Error ? error.message : String(error);
     throw new VoiceUnavailableError(
-      `La sintesi vocale ha risposto ${response.status}: il modello potrebbe non essere abilitato su questo team.`,
-      await response.text().catch(() => undefined),
+      `La sintesi vocale non e' riuscita: ${detail}`,
+      error,
     );
   }
-
-  const result = (await response.json()) as { audio?: string };
-  if (!result.audio) {
-    throw new VoiceUnavailableError(
-      "La sintesi vocale non ha restituito audio.",
-    );
-  }
-
-  return { audioBase64: result.audio, mediaType: "audio/mpeg" };
 }

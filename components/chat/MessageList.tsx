@@ -14,6 +14,7 @@ import {
   MessageScrollerButton,
   MessageScrollerContent,
   MessageScrollerItem,
+  MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
 import { Spinner } from "@/components/ui/spinner";
@@ -36,26 +37,32 @@ export type MessageListProps = {
 
 export function MessageList({ messages, busy }: MessageListProps) {
   return (
-    <MessageScroller className="flex-1">
-      <MessageScrollerViewport>
-        <MessageScrollerContent className="px-4 py-6">
-          {messages.map((message) => (
-            <MessageScrollerItem key={message.id}>
-              <MessageRow message={message} />
-            </MessageScrollerItem>
-          ))}
-          {busy ? (
-            <MessageScrollerItem scrollAnchor>
-              <Marker className="gap-2">
-                <Spinner className="size-3" />
-                sto pensando
-              </Marker>
-            </MessageScrollerItem>
-          ) : null}
-        </MessageScrollerContent>
-      </MessageScrollerViewport>
-      <MessageScrollerButton className="absolute bottom-4 left-1/2 -translate-x-1/2" />
-    </MessageScroller>
+    // Il Provider e' obbligatorio: e' lui a tenere il contesto che il pulsante
+    // "torna in fondo" legge. Senza, il pulsante lancia
+    // "useMessageScroller must be used within a MessageScroller".
+    <MessageScrollerProvider>
+      <MessageScroller className="flex-1">
+        <MessageScrollerViewport>
+          <MessageScrollerContent className="px-4 py-6">
+            {messages.map((message) => (
+              <MessageScrollerItem key={message.id}>
+                <MessageRow message={message} />
+              </MessageScrollerItem>
+            ))}
+            {busy ? (
+              <MessageScrollerItem scrollAnchor>
+                <Marker className="gap-2">
+                  <Spinner className="size-3" />
+                  sto pensando
+                </Marker>
+              </MessageScrollerItem>
+            ) : null}
+          </MessageScrollerContent>
+        </MessageScrollerViewport>
+        {/* Il posizionamento se lo porta dietro il primitivo. */}
+        <MessageScrollerButton />
+      </MessageScroller>
+    </MessageScrollerProvider>
   );
 }
 

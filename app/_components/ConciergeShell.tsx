@@ -104,10 +104,20 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mx-auto grid w-full max-w-[1280px] flex-1 grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-[2fr_3fr] lg:px-12 lg:py-8">
-        {/* Mobile: l'avatar sta sopra e alto 240px, come da DESIGN.md. */}
-        <div className="h-60 md:h-80 lg:h-auto lg:min-h-0">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {/*
+        Le due colonne hanno un'altezza definita a ogni breakpoint, mai `auto`.
+        Un canvas 3D dentro un contenitore che si dimensiona sul contenuto
+        entra in una spirale: misura, cresce, rimisura — e la pagina scrolla
+        all'infinito con l'avatar gigante. L'altezza su desktop e' il viewport
+        meno intestazione, barra voce e margini.
+
+        `minmax(0, …)` invece di `2fr_3fr` secchi: senza, il canvas 3D impone la
+        propria larghezza minima e si prende due terzi della riga, schiacciando
+        la chat contro il bordo.
+      */}
+      <div className="mx-auto grid w-full max-w-[1280px] flex-1 grid-cols-1 gap-6 px-4 py-6 lg:h-[calc(100dvh-8rem)] lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:px-12 lg:py-8">
+        <div className="h-60 min-h-0 md:h-80 lg:h-full">
           <AvatarController
             events={agent.events}
             listening={listening}
@@ -116,7 +126,7 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
           />
         </div>
 
-        <div className="min-h-[420px] lg:min-h-0">
+        <div className="h-[520px] min-h-0 lg:h-full">
           <ChatPanel
             messages={agent.data.messages}
             busy={busy}

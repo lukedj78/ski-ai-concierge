@@ -78,20 +78,28 @@ export function ConciergeShell({
     [modelId],
   );
 
-  const realtime = useRealtime({
-    model,
-    api: { token: "/api/realtime/token" },
-    sessionConfig: {
+  // La configurazione va memorizzata: un oggetto nuovo a ogni render fa
+  // rientrare il hook nel proprio effetto di sincronizzazione all'infinito
+  // ("Maximum update depth exceeded").
+  const sessionConfig = useMemo(
+    () => ({
       voice,
-      turnDetection: { type: "server-vad" },
+      turnDetection: { type: "server-vad" as const },
       instructions: INSTRUCTIONS,
       // Sia voce sia testo: la chat scrive quello che l'avatar dice.
-      outputModalities: ["audio", "text"],
+      outputModalities: ["audio" as const, "text" as const],
       // E anche quello che dici tu: senza, in chat comparirebbero solo le
       // risposte e la conversazione risulterebbe a meta'.
       inputAudioTranscription: { model: transcription, language: "it" },
       outputAudioTranscription: { model: transcription, language: "it" },
-    },
+    }),
+    [voice, transcription],
+  );
+
+  const realtime = useRealtime({
+    model,
+    api: { token: "/api/realtime/token" },
+    sessionConfig,
     async onToolCall({ toolCall }) {
       const args = toolCall.args as { domanda?: string };
       const question = args.domanda?.trim();
@@ -124,13 +132,16 @@ export function ConciergeShell({
 
   // Entrando nella pagina la sessione si apre da sola: il concierge saluta per
   // primo, come farebbe qualcuno dietro al banco.
+  const session = useRef(realtime);
+  session.current = realtime;
+
   useEffect(() => {
-    if (status !== "disconnected" || greeted.current) return;
+    if (greeted.current) return;
     greeted.current = true;
 
-    realtime
+    session.current
       .connect()
-      .then(() => realtime.requestResponse())
+      .then(() => session.current.requestResponse())
       .catch((error: unknown) => {
         setNotice(
           error instanceof Error
@@ -138,7 +149,7 @@ export function ConciergeShell({
             : "Non sono riuscito ad aprire la conversazione.",
         );
       });
-  }, [status, realtime]);
+  }, []);
 
   // A fine riproduzione la bocca torna chiusa.
   useEffect(() => {
@@ -150,9 +161,8 @@ export function ConciergeShell({
     return () => {
       for (const track of streamRef.current?.getTracks() ?? []) track.stop();
       streamRef.current = null;
-      realtime.disconnect();
+      session.current.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo allo smontaggio
   }, []);
 
   async function toggleMic() {

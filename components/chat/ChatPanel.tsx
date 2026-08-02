@@ -11,6 +11,8 @@ import { MessageList } from "./MessageList";
 export type ChatPanelProps = {
   messages: readonly EveMessage[];
   busy: boolean;
+  /** Cosa sta facendo il negozio mentre il cliente aspetta. */
+  thinking?: { question: string; tools: string[] } | null;
   error?: Error | null;
   onSend: (text: string) => void;
 };
@@ -21,13 +23,19 @@ export type ChatPanelProps = {
  * Non conosce eve: riceve messaggi e stato, restituisce testo scritto. Chi la
  * usa decide da dove arrivano — dalla tastiera o dal microfono.
  */
-export function ChatPanel({ messages, busy, error, onSend }: ChatPanelProps) {
+export function ChatPanel({
+  messages,
+  busy,
+  thinking,
+  error,
+  onSend,
+}: ChatPanelProps) {
   return (
     <Card className="flex h-full min-h-0 flex-col gap-0 overflow-hidden p-0">
-      {messages.length === 0 ? (
+      {messages.length === 0 && !thinking ? (
         <EmptyState />
       ) : (
-        <MessageList messages={messages} busy={busy} />
+        <MessageList messages={messages} busy={busy} thinking={thinking} />
       )}
 
       {error ? (

@@ -8,11 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useEveAgent } from "eve/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AvatarController } from "@/components/avatar/AvatarController";
-import {
-  CLOSED_MOUTH,
-  type VisemeWeights,
-  visemesFromSamples,
-} from "@/components/avatar/animations/lipSync";
+import { useVisemeTimeline } from "@/components/avatar/animations/useVisemeTimeline";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { VoiceStatus } from "@/components/voice/VoiceStatus";
 import { Button } from "@/components/ui/button";
@@ -56,15 +52,13 @@ export function ConciergeShell({
 }: ConciergeShellProps) {
   const [notice, setNotice] = useState<string | null>(null);
   /**
-   * I pesi dei visemi vivono in un oggetto mutabile, non nello stato di React.
-   *
-   * L'audio arriva a blocchi ogni venti millisecondi: passare da `useState`
-   * significherebbe cinquanta render al secondo, e un'eccezione su un singolo
-   * blocco fermerebbe l'aggiornamento per tutto il resto della frase — la
-   * bocca si muove due o tre volte e poi resta ferma. L'avatar legge questo
-   * oggetto a ogni frame, che e' come si anima.
+   * La bocca segue il tempo dell'audio, non quello della rete: i blocchi
+   * arrivano in anticipo rispetto a quando si sentono, e la linea temporale li
+   * consuma al ritmo giusto. Vedi `useVisemeTimeline`.
    */
-  const mouth = useRef<VisemeWeights>({ ...CLOSED_MOUTH });
+  const { mouth, push: pushAudio, reset: resetMouth } = useVisemeTimeline(
+    AUDIO_SAMPLE_RATE,
+  );
   const [micOn, setMicOn] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
@@ -72,6 +66,18 @@ export function ConciergeShell({
   // cinquanta al secondo: si accende al primo blocco audio e si spegne dopo un
   // po' di silenzio.
   const [voiceActive, setVoiceActive] = useState(false);
+
+  /**
+   * Cosa sta facendo il negozio mentre il cliente aspetta.
+   *
+   * Senza, fra la domanda e la risposta non succede niente sullo schermo: la
+   * conversazione sembra piantata proprio nel momento in cui sta lavorando.
+   * In questa fase di prova mostriamo anche quali tool girano.
+   */
+  const [thinking, setThinking] = useState<{
+    question: string;
+    tools: string[];
+  } | null>(null);
   const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const greeted = useRef(false);
   const askResolver = useRef<{
@@ -83,6 +89,25 @@ export function ConciergeShell({
   // suo unico strumento; qui si aspetta la risposta e la si restituisce.
   const agent = useEveAgent({
     onEvent(event) {
+      // I tool che partono si vedono man mano, non a cose fatte.
+      if (event.type === "actions.requested") {
+        // Le azioni non sono tutte chiamate a tool: `load-skill` e le
+        // deleghe ai sub-agenti hanno una forma diversa.
+        const names = event.data.actions.map((action) =>
+          action.kind === "tool-call"
+            ? action.toolName
+            : action.kind === "load-skill"
+              ? "load_skill"
+              : action.kind,
+        );
+        setThinking((current) =>
+          current
+            ? { ...current, tools: [...current.tools, ...names] }
+            : current,
+        );
+        return;
+      }
+
       const waiting = askResolver.current;
       if (!waiting) return;
 
@@ -104,21 +129,45 @@ export function ConciergeShell({
   /** Oltre questo tempo il modello vocale deve poter dire qualcosa. */
   const ASK_TIMEOUT_MS = 45_000;
 
+  /**
+   * Le domande al negozio vanno in fila indiana.
+   *
+   * Una sessione eve elabora un turno alla volta: se il modello vocale chiede
+   * due cose ravvicinate — succede, parla mentre pensa — la seconda `send`
+   * viene rifiutata con "eve session is already processing a turn". Qui ogni
+   * richiesta aspetta che la precedente abbia finito, invece di fallire.
+   */
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+
   function askConcierge(question: string): Promise<string> {
+    const run = queue.current.then(
+      () => runAsk(question),
+      () => runAsk(question),
+    );
+    // La coda non deve interrompersi per una domanda andata male.
+    queue.current = run.catch(() => undefined);
+    return run;
+  }
+
+  function runAsk(question: string): Promise<string> {
+    setThinking({ question, tools: [] });
     return new Promise<string>((resolve, reject) => {
       const timer = setTimeout(() => {
         if (askResolver.current?.resolve !== resolve) return;
         askResolver.current = null;
         reject(new Error("Il sistema del negozio non ha risposto in tempo."));
+        setThinking(null);
       }, ASK_TIMEOUT_MS);
 
       askResolver.current = {
         resolve: (text) => {
           clearTimeout(timer);
+          setThinking(null);
           resolve(text);
         },
         reject: (error) => {
           clearTimeout(timer);
+          setThinking(null);
           reject(error);
         },
       };
@@ -126,6 +175,7 @@ export function ConciergeShell({
       agent.send({ message: question }).catch((error: unknown) => {
         clearTimeout(timer);
         askResolver.current = null;
+        setThinking(null);
         reject(error instanceof Error ? error : new Error(String(error)));
       });
     });
@@ -182,11 +232,7 @@ export function ConciergeShell({
 
       // Un blocco malformato non deve zittire tutti quelli dopo.
       try {
-        // Dai campioni alle formanti, dalle formanti ai visemi: e' qui che il
-        // lip sync smette di essere un apri-e-chiudi e diventa una bocca che
-        // pronuncia le vocali che si sentono.
-        const samples = decodeRealtimeAudio(event.delta);
-        mouth.current = visemesFromSamples(samples, AUDIO_SAMPLE_RATE).weights;
+        pushAudio(decodeRealtimeAudio(event.delta));
       } catch (error) {
         console.warn("[voce] blocco audio non decodificabile", error);
         return;
@@ -194,10 +240,9 @@ export function ConciergeShell({
 
       setVoiceActive(true);
       if (silenceTimer.current) clearTimeout(silenceTimer.current);
-      silenceTimer.current = setTimeout(() => {
-        mouth.current = { ...CLOSED_MOUTH };
-        setVoiceActive(false);
-      }, 350);
+      // Piu' lungo del silenzio della linea temporale: qui si spegne solo lo
+      // stato "sta parlando", la bocca la chiude gia' lei.
+      silenceTimer.current = setTimeout(() => setVoiceActive(false), 600);
     },
     onError(error) {
       setNotice(error.message);
@@ -247,6 +292,7 @@ export function ConciergeShell({
   async function toggleMic() {
     if (micOn) {
       realtime.stopAudioCapture();
+      resetMouth();
       // Fermare la cattura non spegne le tracce: senza questo il browser
       // resta con la spia accesa e continua a registrare.
       for (const track of streamRef.current?.getTracks() ?? []) track.stop();
@@ -291,10 +337,10 @@ export function ConciergeShell({
 
   const avatarState = speakingNow
     ? ("speaking" as const)
-    : micOn && isCapturing
-      ? ("listening" as const)
-      : status === "connecting"
-        ? ("thinking" as const)
+    : thinking || status === "connecting"
+      ? ("thinking" as const)
+      : micOn && isCapturing
+        ? ("listening" as const)
         : ("idle" as const);
 
   return (
@@ -314,6 +360,7 @@ export function ConciergeShell({
           <ChatPanel
             messages={chatMessages}
             busy={status === "connecting"}
+            thinking={thinking}
             error={null}
             onSend={(text) => {
               // Scrivere e parlare entrano nella stessa sessione: l'avatar

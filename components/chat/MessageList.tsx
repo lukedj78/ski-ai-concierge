@@ -29,9 +29,18 @@ const TOOL_LABEL: Record<string, string> = {
 export type MessageListProps = {
   messages: readonly EveMessage[];
   busy: boolean;
+  /**
+   * Il turno che il negozio sta elaborando, con i tool che stanno girando.
+   * Serve a non lasciare lo schermo fermo proprio mentre si lavora.
+   */
+  thinking?: { question: string; tools: string[] } | null;
 };
 
-export function MessageList({ messages, busy }: MessageListProps) {
+export function MessageList({
+  messages,
+  busy,
+  thinking,
+}: MessageListProps) {
   return (
     // Il Provider e' obbligatorio: e' lui a tenere il contesto che il pulsante
     // "torna in fondo" legge. Senza, il pulsante lancia
@@ -45,11 +54,30 @@ export function MessageList({ messages, busy }: MessageListProps) {
                 <MessageRow message={message} />
               </MessageScrollerItem>
             ))}
-            {busy ? (
+            {thinking ? (
+              <MessageScrollerItem scrollAnchor>
+                <div className="space-y-1.5 py-1">
+                  <Marker className="gap-2">
+                    <Spinner className="size-3" />
+                    controllo in negozio
+                  </Marker>
+                  {thinking.tools.map((tool, index) => (
+                    <Marker
+                      // I tool possono ripetersi nello stesso turno: la chiave
+                      // tiene conto anche della posizione.
+                      key={`${tool}-${index}`}
+                      className="ml-4 font-[family-name:var(--font-jetbrains-mono)] text-[12px]"
+                    >
+                      {TOOL_LABEL[tool] ?? tool}
+                    </Marker>
+                  ))}
+                </div>
+              </MessageScrollerItem>
+            ) : busy ? (
               <MessageScrollerItem scrollAnchor>
                 <Marker className="gap-2">
                   <Spinner className="size-3" />
-                  sto pensando
+                  un attimo
                 </Marker>
               </MessageScrollerItem>
             ) : null}

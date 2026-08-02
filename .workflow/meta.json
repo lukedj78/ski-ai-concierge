@@ -2,8 +2,8 @@
   "project_slug": "ski-ai-concierge",
   "project_name": "Ski AI Concierge",
   "created_at": "2026-08-02T13:36:36Z",
-  "updated_at": "2026-08-02T13:49:32Z",
-  "phase": "prd_drafted",
+  "updated_at": "2026-08-02T13:51:45Z",
+  "phase": "tasks_split",
   "stack": {
     "framework": "next",
     "ui": "shadcn",
@@ -28,6 +28,15 @@
       ],
       "phase_before": "empty",
       "phase_after": "prd_drafted"
+    },
+    {
+      "skill": "prd-to-tasks",
+      "ran_at": "2026-08-02T13:51:45Z",
+      "outputs": [
+        "tasks.md"
+      ],
+      "phase_before": "prd_drafted",
+      "phase_after": "tasks_split"
     }
   ],
   "artifacts": {
@@ -45,6 +54,17 @@
       "sha256": "580fd816b05778d1e80ceb18c4975262fe92e85dede4563b38727dad0de0effa",
       "produced_by": "prd-from-idea",
       "produced_at": "2026-08-02T13:49:32Z"
+    },
+    ".workflow/tasks.md": {
+      "sha256": "aab090cf9f9b3ba737d43994e2fb898810a3c1016c7457d1797842b3c54824d0",
+      "produced_by": "prd-to-tasks",
+      "produced_at": "2026-08-02T13:51:45Z",
+      "derived_from": [
+        {
+          "path": ".workflow/PRD.md",
+          "sha256": "580fd816b05778d1e80ceb18c4975262fe92e85dede4563b38727dad0de0effa"
+        }
+      ]
     }
   }
 }

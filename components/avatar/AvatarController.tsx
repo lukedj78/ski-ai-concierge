@@ -12,6 +12,8 @@ export type AvatarControllerProps = {
   events: readonly MessageStreamEvent[];
   /** Il microfono e' aperto. */
   listening?: boolean;
+  /** L'audio della risposta e' in riproduzione. */
+  speaking?: boolean;
   /** Ampiezza dell'audio in riproduzione, fra 0 e 1. */
   amplitude?: number;
   /** URL del modello VRM, risolto dal server. */
@@ -28,12 +30,13 @@ export type AvatarControllerProps = {
 export function AvatarController({
   events,
   listening = false,
+  speaking = false,
   amplitude = 0,
   vrmUrl,
 }: AvatarControllerProps) {
   const state = useMemo(
-    () => avatarStateFromEvents(events, { listening }),
-    [events, listening],
+    () => avatarStateFromEvents(events, { listening, speaking }),
+    [events, listening, speaking],
   );
 
   return (
@@ -48,9 +51,19 @@ export function AvatarController({
             "radial-gradient(120% 90% at 50% 25%, color-mix(in oklab, var(--accent) 70%, transparent), transparent 70%)",
         }}
       />
-      <AvatarCanvas>
-        <Avatar3D state={state} amplitude={amplitude} vrmUrl={vrmUrl} />
-      </AvatarCanvas>
+      {/*
+        Il canvas sta in posizione assoluta, non nel flusso.
+        Non e' un vezzo: un canvas WebGL nel flusso si dimensiona sul
+        contenitore, il contenitore si dimensiona sul contenuto, e a ogni frame
+        crescono entrambi — misurato in un caso a 108.589 pixel di altezza.
+        In assoluto puo' solo *leggere* la dimensione del genitore, mai
+        imporgliela.
+      */}
+      <div className="absolute inset-0">
+        <AvatarCanvas>
+          <Avatar3D state={state} amplitude={amplitude} vrmUrl={vrmUrl} />
+        </AvatarCanvas>
+      </div>
       <Badge
         variant="secondary"
         className="absolute bottom-3 left-3 font-[family-name:var(--font-jetbrains-mono)] text-[12px] uppercase tracking-wide"

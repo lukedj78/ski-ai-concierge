@@ -16,10 +16,18 @@ export type AvatarState = "idle" | "listening" | "thinking" | "speaking";
  */
 export function avatarStateFromEvents(
   events: readonly MessageStreamEvent[],
-  options: { listening?: boolean } = {},
+  options: { listening?: boolean; speaking?: boolean } = {},
 ): AvatarState {
   // Il microfono aperto batte tutto: sta parlando l'utente.
   if (options.listening) return "listening";
+
+  // L'audio in riproduzione viene subito dopo, e batte lo stream.
+  //
+  // Serve perche' i due tempi non coincidono: il testo arriva in streaming
+  // durante il turno, l'audio arriva quando il turno e' gia' chiuso. Senza
+  // questa riga lo stato sarebbe tornato "idle" proprio mentre la voce parla,
+  // e la bocca resterebbe ferma per tutta la risposta.
+  if (options.speaking) return "speaking";
 
   for (let i = events.length - 1; i >= 0; i -= 1) {
     switch (events[i]?.type) {

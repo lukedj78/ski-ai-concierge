@@ -149,30 +149,6 @@ function GlbFigure({
       gltf.scene.getObjectByName("head") ??
       null;
 
-    gltf.scene.updateWorldMatrix(true, true);
-
-    // L'inquadratura si adatta al modello, non il contrario. Arrivano cose
-    // molto diverse: un umanoide a figura intera in metri (Ready Player Me,
-    // Avaturn), oppure una testa o un busto generati da un servizio come
-    // ChatAvatar, spesso in un'altra scala e senza scheletro.
-    let verticalOffset = 0;
-    let scale = 1;
-
-    if (head) {
-      // Umanoide riggato: si abbassa finche' la testa non e' in inquadratura.
-      verticalOffset = -head.getWorldPosition(new Vector3()).y;
-    } else {
-      // Solo testa o busto: si normalizza sull'ingombro. `TARGET_HEIGHT` e'
-      // circa il 55% dell'altezza visibile dalla camera, cosi' resta aria
-      // sopra la testa invece di un primo piano schiacciato sui bordi.
-      const TARGET_HEIGHT = 0.85;
-      const box = new Box3().setFromObject(gltf.scene);
-      const size = box.getSize(new Vector3());
-      const center = box.getCenter(new Vector3());
-      if (size.y > 0) scale = TARGET_HEIGHT / size.y;
-      verticalOffset = -center.y * scale;
-    }
-
     // I nomi dei blendshape non sono standardizzati fuori da ARKit e dai
     // visemi Oculus: se non se ne riconosce nessuno, si cerca qualcosa che
     // apra la bocca. Meglio un lip sync approssimativo di una bocca ferma.
@@ -203,8 +179,6 @@ function GlbFigure({
     return {
       morphMeshes,
       head,
-      verticalOffset,
-      scale,
       discovered,
       jawBone: jawBone as Object3D | null,
       jawRestX,
@@ -219,12 +193,39 @@ function GlbFigure({
     }
   }
 
+  // L'inquadratura si misura al primo frame utile, non nel `useMemo`: li' le
+  // matrici del mondo possono non essere ancora aggiornate, e una misura presa
+  // troppo presto mette la testa fuori campo — il sintomo e' un avatar di cui
+  // si vedono solo i piedi.
+  const framing = useRef<{ offsetY: number; scale: number } | null>(null);
+
   useFrame(() => {
     const time = performance.now() / 1000;
     const motion = idleMotion(time, state);
 
-    gltf.scene.scale.setScalar(rig.scale);
-    gltf.scene.position.y = rig.verticalOffset + motion.breath;
+    if (!framing.current) {
+      gltf.scene.scale.setScalar(1);
+      gltf.scene.position.set(0, 0, 0);
+      gltf.scene.updateWorldMatrix(true, true);
+
+      if (rig.head) {
+        const headY = rig.head.getWorldPosition(new Vector3()).y;
+        if (headY !== 0) framing.current = { offsetY: -headY, scale: 1 };
+      } else {
+        const box = new Box3().setFromObject(gltf.scene);
+        const size = box.getSize(new Vector3());
+        const center = box.getCenter(new Vector3());
+        if (size.y > 0) {
+          const scale = 0.85 / size.y;
+          framing.current = { offsetY: -center.y * scale, scale };
+        }
+      }
+      // Se la misura non e' ancora attendibile si riprova al frame dopo.
+      if (!framing.current) return;
+    }
+
+    gltf.scene.scale.setScalar(framing.current.scale);
+    gltf.scene.position.y = framing.current.offsetY + motion.breath;
 
     if (rig.head) {
       rig.head.rotation.y = motion.headYaw;

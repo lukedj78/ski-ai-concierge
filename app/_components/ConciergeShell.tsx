@@ -5,6 +5,8 @@ import { useMemo, useRef, useState } from "react";
 import { AvatarController } from "@/components/avatar/AvatarController";
 import { avatarStateFromEvents } from "@/components/avatar/AvatarState";
 import { ChatPanel } from "@/components/chat/ChatPanel";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { VoiceButton } from "@/components/voice/VoiceButton";
 import { VoiceStatus } from "@/components/voice/VoiceStatus";
 import { useVoicePlayback } from "@/components/voice/useVoicePlayback";
@@ -35,34 +37,58 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
   const [listening, setListening] = useState(false);
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
 
-  const { amplitude, play } = useVoicePlayback();
+  const { amplitude, speaking, play } = useVoicePlayback();
 
   // Segna il turno in corso come parlato: la risposta andra' letta.
   const spokenTurn = useRef(false);
 
+  // Leggere ad alta voce ogni risposta, non solo quelle nate dal microfono.
+  // Acceso di default: e' quello che ci si aspetta da un concierge parlante, e
+  // in una demo la differenza fra "sa parlare" e "parla" e' tutta qui.
+  const [readAloud, setReadAloud] = useState(true);
+
+  // Evita di leggere due volte lo stesso blocco: `message.completed` puo'
+  // arrivare piu' di una volta per turno, quando il modello parla prima di
+  // chiamare un tool.
+  const spokenTurnId = useRef<string | null>(null);
+
   const agent = useEveAgent({
-    onFinish(snapshot) {
-      if (!spokenTurn.current) return;
-      spokenTurn.current = false;
+    onEvent(event) {
+      if (event.type === "turn.started") {
+        spokenTurnId.current = null;
+        return;
+      }
 
-      const last = snapshot.data.messages.at(-1);
-      if (last?.role !== "assistant") return;
+      // La sintesi parte al primo blocco di risposta completo, non a fine
+      // turno: aspettare `turn.completed` significa aspettare anche la coda
+      // di eventi che segue, e sono secondi di silenzio in piu'.
+      if (event.type !== "message.completed") return;
+      if (!spokenTurn.current && !readAloud) return;
+      if (spokenTurnId.current === event.data.turnId) return;
 
-      const text = last.parts
-        .filter((part) => part.type === "text")
-        .map((part) => part.text)
-        .join(" ")
-        .trim();
+      const text = event.data.message?.trim();
       if (!text) return;
 
+      spokenTurnId.current = event.data.turnId;
       void speak(text);
+    },
+    onFinish() {
+      spokenTurn.current = false;
     },
     onError() {
       spokenTurn.current = false;
     },
   });
 
+  // Una sola sintesi alla volta. In sviluppo React monta i componenti due
+  // volte e la stessa risposta partirebbe in doppio, con il secondo audio che
+  // interrompe il primo a meta' frase.
+  const lastSpokenText = useRef<string | null>(null);
+
   async function speak(text: string) {
+    if (lastSpokenText.current === text) return;
+    lastSpokenText.current = text;
+
     try {
       const response = await fetch("/api/voice/speak", {
         method: "POST",
@@ -88,8 +114,8 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
   const busy = agent.status === "submitted" || agent.status === "streaming";
 
   const avatarState = useMemo(
-    () => avatarStateFromEvents(agent.events, { listening }),
-    [agent.events, listening],
+    () => avatarStateFromEvents(agent.events, { listening, speaking }),
+    [agent.events, listening, speaking],
   );
 
   function sendTyped(text: string) {
@@ -116,17 +142,18 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
         propria larghezza minima e si prende due terzi della riga, schiacciando
         la chat contro il bordo.
       */}
-      <div className="mx-auto grid w-full max-w-[1280px] flex-1 grid-cols-1 gap-6 px-4 py-6 lg:h-[calc(100dvh-8rem)] lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:px-12 lg:py-8">
-        <div className="h-60 min-h-0 md:h-80 lg:h-full">
+      <div className="mx-auto grid w-full max-w-[1280px] flex-1 grid-cols-1 gap-6 px-4 py-6  lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:px-12 lg:py-8">
+        <div className="relative h-60 min-h-0 overflow-hidden md:h-80 lg:h-[calc(100dvh-9.5rem)] lg:max-h-[680px]">
           <AvatarController
             events={agent.events}
             listening={listening}
+            speaking={speaking}
             amplitude={amplitude}
             vrmUrl={vrmUrl}
           />
         </div>
 
-        <div className="h-[520px] min-h-0 lg:h-full">
+        <div className="h-[520px] min-h-0 overflow-hidden lg:h-[calc(100dvh-9.5rem)] lg:max-h-[680px]">
           <ChatPanel
             messages={agent.data.messages}
             busy={busy}
@@ -145,6 +172,18 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
             disabled={busy}
           />
           <VoiceStatus state={avatarState} notice={voiceNotice} />
+
+          <Label
+            htmlFor="read-aloud"
+            className="ml-auto flex cursor-pointer items-center gap-2 text-[14px] text-on-surface-variant"
+          >
+            <Switch
+              id="read-aloud"
+              checked={readAloud}
+              onCheckedChange={setReadAloud}
+            />
+            Leggi le risposte
+          </Label>
         </div>
       </div>
     </div>

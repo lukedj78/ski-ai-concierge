@@ -27,7 +27,7 @@ export function WordmarkFooter() {
             <FooterColumn
               title="Prodotto"
               links={[
-                { href: "/", label: "Concierge" },
+                { href: "/concierge", label: "Concierge" },
                 { href: "/showcase", label: "Design system" },
               ]}
             />

@@ -35,6 +35,7 @@ export function GET() {
   return Response.json({
     model: voiceModels.realtime,
     voice: voiceModels.realtimeVoice,
+    transcription: voiceModels.transcription,
   });
 }
 

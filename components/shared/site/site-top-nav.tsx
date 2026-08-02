@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const LINKS = [
-  { href: "/", label: "Concierge" },
+  { href: "/concierge", label: "Concierge" },
   { href: "/showcase", label: "Design system" },
 ];
 
@@ -53,7 +53,7 @@ export function SiteTopNav({ status }: { status?: string }) {
             size="sm"
             className="h-9"
             nativeButton={false}
-            render={<Link href="/" />}
+            render={<Link href="/concierge" />}
           >
             Parla col concierge
           </Button>

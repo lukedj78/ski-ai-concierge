@@ -89,8 +89,12 @@ export async function transcribeAudio(audioDataUrl: string): Promise<{
       durationInSeconds: result.durationInSeconds,
     };
   } catch (error) {
+    // La causa vera va sempre nei log del server: un messaggio generico
+    // trasforma un problema diagnosticabile in un mistero.
+    console.error("[voce] trascrizione fallita", error);
+    const detail = error instanceof Error ? error.message : String(error);
     throw new VoiceUnavailableError(
-      "La trascrizione non e' riuscita: il modello audio potrebbe non essere abilitato su questo team.",
+      `La trascrizione non e' riuscita: ${detail}`,
       error,
     );
   }

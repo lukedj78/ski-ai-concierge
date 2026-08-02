@@ -2,8 +2,8 @@
   "project_slug": "ski-ai-concierge",
   "project_name": "Ski AI Concierge",
   "created_at": "2026-08-02T13:36:36Z",
-  "updated_at": "2026-08-02T13:40:25Z",
-  "phase": "empty",
+  "updated_at": "2026-08-02T13:49:32Z",
+  "phase": "prd_drafted",
   "stack": {
     "framework": "next",
     "ui": "shadcn",
@@ -14,14 +14,37 @@
     "nextjs_version": "16",
     "ui_base": "radix",
     "icon_library": "lucide",
-    "agent": "eve"
+    "agent": "eve",
+    "route_groups": [],
+    "forms": "tanstack-form"
   },
-  "history": [],
+  "history": [
+    {
+      "skill": "prd-from-idea",
+      "ran_at": "2026-08-02T13:49:31Z",
+      "outputs": [
+        "PROJECT.md",
+        "PRD.md"
+      ],
+      "phase_before": "empty",
+      "phase_after": "prd_drafted"
+    }
+  ],
   "artifacts": {
     "docs/superpowers/specs/2026-08-02-ski-ai-concierge-design.md": {
       "sha256": "e1199a7705ca0dbac351932d4b61862d0f1c43d5c09d027c4c2fdf746fb660e0",
       "produced_by": "brainstorming",
       "produced_at": "2026-08-02T13:40:25Z"
+    },
+    ".workflow/PROJECT.md": {
+      "sha256": "28b64c9c7418972fafdfe03f1e0a7dab2daf5491cd9ae764a2173c0927184f1b",
+      "produced_by": "prd-from-idea",
+      "produced_at": "2026-08-02T13:49:32Z"
+    },
+    ".workflow/PRD.md": {
+      "sha256": "580fd816b05778d1e80ceb18c4975262fe92e85dede4563b38727dad0de0effa",
+      "produced_by": "prd-from-idea",
+      "produced_at": "2026-08-02T13:49:32Z"
     }
   }
 }

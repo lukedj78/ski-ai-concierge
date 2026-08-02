@@ -2,6 +2,9 @@
   "name": "ski-ai-concierge",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "next dev",
     "dev:agent": "eve dev",

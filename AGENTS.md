@@ -53,6 +53,22 @@ diverge. Prima di scrivere codice eve, leggi la pagina che ti serve.
 Due scorciatoie utili: `https://eve.dev/sitemap.md` elenca tutte le pagine, e
 aggiungere `.md` all'URL di una pagina ne restituisce il markdown grezzo.
 
+## Node 24, non meno
+
+eve richiede **Node >= 24**. Il progetto lo dichiara in `.nvmrc` e in
+`engines`, ma la shell non se ne accorge da sola: se hai un Node di sistema
+piu' vecchio nel PATH, `pnpm dev` muore con
+
+```
+[eve:dev] eve requires Node.js >=24. You are running v22.x
+```
+
+Prima di lavorare, nella cartella del progetto:
+
+```bash
+nvm use
+```
+
 ## Sviluppo locale — due processi, non uno
 
 `pnpm dev` avvia Next; l'agente eve e' un **processo separato**

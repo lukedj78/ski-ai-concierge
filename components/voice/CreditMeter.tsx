@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -77,7 +77,60 @@ export function CreditMeter({ refreshKey }: CreditMeterProps) {
           : "Spesa di questa conversazione e saldo residuo del Gateway."
       }
     >
-      {formatUsd(spent)} · saldo {formatUsd(balance)}
+      <AnimatedUsd value={spent} /> · saldo <AnimatedUsd value={balance} />
+    </span>
+  );
+}
+
+/**
+ * Una cifra che scorre fino al nuovo valore invece di saltarci.
+ *
+ * Il salto e' breve — mezzo secondo — e serve a farsi notare: in una
+ * conversazione a voce nessuno guarda la barra in basso, e un numero che si
+ * muove per un attimo dice "e' appena successo qualcosa".
+ *
+ * Non e' un contatore in tempo reale, e non deve sembrarlo: il consumo il
+ * Gateway lo registra a scatti, quindi qui si interpola solo fra due letture
+ * vere.
+ */
+function AnimatedUsd({ value }: { value: number }) {
+  const node = useRef<HTMLSpanElement>(null);
+  const shown = useRef(value);
+
+  useEffect(() => {
+    const element = node.current;
+    if (!element) return;
+
+    const from = shown.current;
+    const delta = value - from;
+    if (Math.abs(delta) < 0.0001) {
+      element.textContent = formatUsd(value);
+      return;
+    }
+
+    const DURATION = 500;
+    const start = performance.now();
+    let frame = 0;
+
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / DURATION);
+      // Decelerazione: parte svelta e si posa, invece di fermarsi di colpo.
+      const eased = 1 - (1 - progress) ** 3;
+      const current = from + delta * eased;
+      shown.current = current;
+      element.textContent = formatUsd(current);
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+
+  // `tabular-nums`: senza, le cifre hanno larghezze diverse e il numero balla
+  // mentre scorre.
+  return (
+    <span ref={node} className="tabular-nums">
+      {formatUsd(value)}
     </span>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * I modelli della voce, definiti dove vive la voce: nel sub-agente.
+ * I modelli della voce.
  *
  * Sono tutti identificativi del **Vercel AI Gateway** in formato
  * `creator/modello`. Il Gateway e' l'unica strada verso i modelli: non esiste
@@ -7,6 +7,13 @@
  *
  * Chi li usa: `app/api/realtime/token` e la pagina del concierge, che li riceve
  * come props. Il componente client non sceglie mai un modello.
+ *
+ * Stavano in `agent/subagents/voice/`, insieme a un sub-agente che rendeva
+ * dicibili le risposte quando la voce era batch. Con la sessione realtime quel
+ * lavoro lo fa il modello vocale, e il sub-agente era diventato codice che non
+ * viene mai invocato — per giunta esposto all'agente principale come uno
+ * strumento da non chiamare mai. Rimosso; la dichiarazione dei modelli e'
+ * rimasta, perche' quella serve.
  *
  * Nessuno di questi identificativi e' scritto nel frontend: la rotta del
  * gettone comunica al browser quale modello usare.

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { voiceModels } from "@/agent/subagents/voice/models";
+import { voiceModels } from "@/agent/lib/voice-models";
 import { SiteTopNav } from "@/components/shared/site/site-top-nav";
 import { ConciergeShell } from "./_components/ConciergeShell";
 

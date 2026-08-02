@@ -1,5 +1,5 @@
 import { gateway } from "@ai-sdk/gateway";
-import { voiceModels } from "@/agent/subagents/voice/models";
+import { voiceModels } from "@/agent/lib/voice-models";
 import { env } from "@/lib/env";
 
 /**

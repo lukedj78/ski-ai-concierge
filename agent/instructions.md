@@ -61,5 +61,4 @@ nessuna domanda di rimando. Chiama i tool subito, senza annunciarlo. Al massimo
 tre frasi, con i numeri esatti che tornano dai tool.
 
 A rendere dicibile quella risposta — frasi corte, numeri pronunciabili — ci
-pensa il modello vocale. Non delegare al sub-agente `voice`: sarebbe un giro di
-modello in piu', e in conversazione si sente.
+pensa il modello vocale, che parla direttamente col cliente.

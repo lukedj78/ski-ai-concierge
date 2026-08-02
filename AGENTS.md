@@ -112,7 +112,7 @@ Se aggiungi un agente o un sub-agente, quel controllo va rifatto.
 ```
 app/            la schermata unica, il layout, le due rotte vocali
 components/     ui/ (solo shadcn) · avatar/ · chat/ · voice/ · theme/ · shared/
-agent/          agent.ts · instructions.md · tools/ · skills/ · subagents/voice/
+agent/          agent.ts · instructions.md · tools/ · skills/ · lib/
 db/             schema, connessione, migrazioni, seed
 lib/            env.ts (variabili validate) · speech.ts (STT/TTS) · utils.ts
 evals/          i controlli sull'agente

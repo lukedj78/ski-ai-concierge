@@ -9,7 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { VoiceButton } from "@/components/voice/VoiceButton";
 import { VoiceStatus } from "@/components/voice/VoiceStatus";
-import { useVoicePlayback } from "@/components/voice/useVoicePlayback";
+import {
+  takeCompleteSentences,
+  toSpeakable,
+  useSpokenReply,
+} from "@/components/voice/useSpokenReply";
 
 /**
  * Il contesto che marca un turno come parlato.
@@ -37,7 +41,12 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
   const [listening, setListening] = useState(false);
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
 
-  const { amplitude, speaking, play } = useVoicePlayback();
+  const { amplitude, speaking, enqueue, reset } = useSpokenReply();
+
+  // Quanto del testo in arrivo e' gia' stato accodato, e la coda di frase
+  // ancora incompleta.
+  const cursor = useRef(0);
+  const pending = useRef("");
 
   // Segna il turno in corso come parlato: la risposta andra' letta.
   const spokenTurn = useRef(false);
@@ -47,30 +56,46 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
   // in una demo la differenza fra "sa parlare" e "parla" e' tutta qui.
   const [readAloud, setReadAloud] = useState(true);
 
-  // Evita di leggere due volte lo stesso blocco: `message.completed` puo'
-  // arrivare piu' di una volta per turno, quando il modello parla prima di
-  // chiamare un tool.
-  const spokenTurnId = useRef<string | null>(null);
-
   const agent = useEveAgent({
     onEvent(event) {
+      const shouldSpeak = spokenTurn.current || readAloud;
+
       if (event.type === "turn.started") {
-        spokenTurnId.current = null;
+        cursor.current = 0;
+        pending.current = "";
+        reset();
         return;
       }
 
-      // La sintesi parte al primo blocco di risposta completo, non a fine
-      // turno: aspettare `turn.completed` significa aspettare anche la coda
-      // di eventi che segue, e sono secondi di silenzio in piu'.
-      if (event.type !== "message.completed") return;
-      if (!spokenTurn.current && !readAloud) return;
-      if (spokenTurnId.current === event.data.turnId) return;
+      // La voce insegue il testo mentre scorre, frase per frase: la prima si
+      // sente mentre l'ultima non e' ancora stata scritta. Sintetizzare tutta
+      // la risposta a turno finito voleva dire aspettare due volte — prima il
+      // testo, poi la sintesi — con lo scritto gia' fermo sullo schermo.
+      if (event.type === "message.appended") {
+        if (!shouldSpeak) return;
+        const soFar = event.data.messageSoFar;
+        const fresh = soFar.slice(cursor.current);
+        cursor.current = soFar.length;
 
-      const text = event.data.message?.trim();
-      if (!text) return;
+        const { sentences, rest } = takeCompleteSentences(
+          pending.current + fresh,
+        );
+        pending.current = rest;
+        for (const sentence of sentences) {
+          enqueue(toSpeakable(sentence), setVoiceNotice);
+        }
+        return;
+      }
 
-      spokenTurnId.current = event.data.turnId;
-      void speak(text);
+      // Quello che resta nel buffer a fine blocco: l'ultima frase spesso non
+      // ha punteggiatura finale seguita da spazio.
+      if (event.type === "message.completed") {
+        if (!shouldSpeak) return;
+        const tail = pending.current.trim();
+        pending.current = "";
+        cursor.current = 0;
+        if (tail) enqueue(toSpeakable(tail), setVoiceNotice);
+      }
     },
     onFinish() {
       spokenTurn.current = false;
@@ -79,37 +104,6 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
       spokenTurn.current = false;
     },
   });
-
-  // Una sola sintesi alla volta. In sviluppo React monta i componenti due
-  // volte e la stessa risposta partirebbe in doppio, con il secondo audio che
-  // interrompe il primo a meta' frase.
-  const lastSpokenText = useRef<string | null>(null);
-
-  async function speak(text: string) {
-    if (lastSpokenText.current === text) return;
-    lastSpokenText.current = text;
-
-    try {
-      const response = await fetch("/api/voice/speak", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      const payload = await response.json();
-
-      if (!response.ok) {
-        setVoiceNotice(
-          payload.message ?? "La risposta parlata non e' disponibile.",
-        );
-        return;
-      }
-
-      setVoiceNotice(null);
-      await play(payload.audio as string, payload.mediaType as string);
-    } catch {
-      setVoiceNotice("La risposta parlata non e' disponibile.");
-    }
-  }
 
   const busy = agent.status === "submitted" || agent.status === "streaming";
 

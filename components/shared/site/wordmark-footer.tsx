@@ -26,10 +26,7 @@ export function WordmarkFooter() {
           <div className="flex gap-12">
             <FooterColumn
               title="Prodotto"
-              links={[
-                { href: "/concierge", label: "Concierge" },
-                { href: "/showcase", label: "Design system" },
-              ]}
+              links={[{ href: "/concierge", label: "Concierge" }]}
             />
             <FooterColumn
               title="Progetto"

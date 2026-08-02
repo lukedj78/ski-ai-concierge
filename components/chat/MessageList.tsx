@@ -51,9 +51,18 @@ export function MessageList({
     <MessageScrollerProvider>
       <MessageScroller className="flex-1">
         <MessageScrollerViewport>
-          <MessageScrollerContent className="px-4 py-6">
-            {messages.map((message) => (
-              <MessageScrollerItem key={message.id}>
+          {/* `justify-end`: con pochi messaggi la conversazione sta in basso,
+              come in qualunque chat, invece di restare appesa in alto. */}
+          <MessageScrollerContent className="justify-end px-4 py-6">
+            {messages.map((message, index) => (
+              <MessageScrollerItem
+                key={message.id}
+                // L'ancora sta sull'ultimo elemento: e' quello che deve
+                // restare in vista mentre la conversazione cresce.
+                scrollAnchor={
+                  index === messages.length - 1 && !thinking && !responding
+                }
+              >
                 <MessageRow message={message} />
               </MessageScrollerItem>
             ))}

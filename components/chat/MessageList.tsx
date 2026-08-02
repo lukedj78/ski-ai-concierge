@@ -102,7 +102,9 @@ export function MessageList({
                           />
                           {tool}
                           <span className="text-on-surface-variant">
-                            — {TOOL_LABEL[tool.split(" · ")[0] ?? tool] ?? "in corso"}
+                            —{" "}
+                            {TOOL_LABEL[tool.split(" · ")[0] ?? tool] ??
+                              "in corso"}
                           </span>
                         </Marker>
                       ))

@@ -66,11 +66,7 @@ export function AvatarController({
       */}
       <div className="absolute inset-0">
         <AvatarCanvas>
-          <Avatar3D
-            state={state}
-              visemes={visemes}
-            vrmUrl={vrmUrl}
-          />
+          <Avatar3D state={state} visemes={visemes} vrmUrl={vrmUrl} />
         </AvatarCanvas>
       </div>
       <Badge

@@ -11,6 +11,7 @@ import { AvatarController } from "@/components/avatar/AvatarController";
 import { useVisemeTimeline } from "@/components/avatar/animations/useVisemeTimeline";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { CreditMeter } from "@/components/voice/CreditMeter";
+import { MicLevelRing } from "@/components/voice/MicLevelRing";
 import { VoiceStatus } from "@/components/voice/VoiceStatus";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -78,12 +79,17 @@ export function ConciergeShell({
    * arrivano in anticipo rispetto a quando si sentono, e la linea temporale li
    * consuma al ritmo giusto. Vedi `useVisemeTimeline`.
    */
-  const { mouth, push: pushAudio, reset: resetMouth } = useVisemeTimeline(
-    AUDIO_SAMPLE_RATE,
-  );
+  const {
+    mouth,
+    push: pushAudio,
+    reset: resetMouth,
+  } = useVisemeTimeline(AUDIO_SAMPLE_RATE);
   const [micOn, setMicOn] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
+  // Lo stesso flusso anche come stato: l'anello che reagisce alla voce deve
+  // sapere quando compare e quando sparisce, e un riferimento non lo dice.
+  const [micStream, setMicStream] = useState<MediaStream | null>(null);
   // "Sta parlando" e' uno stato di React, ma cambia due volte per frase, non
   // cinquanta al secondo: si accende al primo blocco audio e si spegne dopo un
   // po' di silenzio.
@@ -128,7 +134,9 @@ export function ConciergeShell({
           // L'argomento distingue due chiamate allo stesso tool: due
           // `load_skill` di fila sono due skill diverse, non un doppione.
           const argument = firstArgument(action.input);
-          return argument ? `${action.toolName} · ${argument}` : action.toolName;
+          return argument
+            ? `${action.toolName} · ${argument}`
+            : action.toolName;
         });
         setThinking((current) =>
           current
@@ -255,7 +263,8 @@ export function ConciergeShell({
       // Il campo vuole il nome nativo del provider, non l'identificativo del
       // Gateway: "whisper-1", non "openai/whisper-1". Con il prefisso il
       // provider risponde "Invalid value" e la sessione non parte.
-      const nativeTranscription = transcription.split("/").pop() ?? transcription;
+      const nativeTranscription =
+        transcription.split("/").pop() ?? transcription;
 
       return {
         ...base,
@@ -380,6 +389,7 @@ export function ConciergeShell({
       // resta con la spia accesa e continua a registrare.
       for (const track of streamRef.current?.getTracks() ?? []) track.stop();
       streamRef.current = null;
+      setMicStream(null);
       setMicOn(false);
       return;
     }
@@ -387,6 +397,7 @@ export function ConciergeShell({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      setMicStream(stream);
       realtime.startAudioCapture(stream);
       setMicOn(true);
       setNotice(null);
@@ -459,28 +470,47 @@ export function ConciergeShell({
       {/* Niente overflow-hidden sopra: annullerebbe lo sticky di questa barra. */}
       <div className="sticky bottom-0 border-t border-outline bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-[72px] max-w-[1280px] items-center gap-4 px-4 lg:px-12">
-          <Button
-            type="button"
-            size="icon"
-            variant={micOn ? "default" : "outline"}
-            className={cn(
-              "size-14 shrink-0 rounded-full",
-              micOn && !isPlaying && "ring-4 ring-ring/40",
-            )}
-            disabled={status !== "connected"}
-            onClick={toggleMic}
-            aria-label={micOn ? "Spegni il microfono" : "Accendi il microfono"}
-          >
-            {status === "connecting" ? (
-              <Spinner className="size-5" />
-            ) : (
-              <HugeiconsIcon
-                icon={micOn ? Mic01Icon : MicOff01Icon}
-                size={22}
-                strokeWidth={1.8}
+          {/* L'anello che si espande e' l'unico invito che c'e': senza, il
+              microfono spento sembra un pulsante disattivato e nessuno lo
+              preme. Sparisce appena la conversazione e' aperta, perche' a quel
+              punto non serve piu' e competerebbe con l'avatar. */}
+          <span className="relative flex shrink-0">
+            {status === "connected" && !micOn ? (
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 animate-ping rounded-full bg-primary/30"
               />
-            )}
-          </Button>
+            ) : null}
+
+            {/* Col microfono aperto l'anello smette di invitare e comincia a
+                rispondere: si allarga con la voce che entra. */}
+            {micOn ? <MicLevelRing stream={micStream} /> : null}
+
+            <Button
+              type="button"
+              size="icon"
+              variant={micOn ? "default" : "outline"}
+              className={cn(
+                "relative size-14 shrink-0 rounded-full",
+                micOn && !isPlaying && "ring-4 ring-ring/40",
+              )}
+              disabled={status !== "connected"}
+              onClick={toggleMic}
+              aria-label={
+                micOn ? "Spegni il microfono" : "Accendi il microfono"
+              }
+            >
+              {status === "connecting" ? (
+                <Spinner className="size-5" />
+              ) : (
+                <HugeiconsIcon
+                  icon={micOn ? Mic01Icon : MicOff01Icon}
+                  size={22}
+                  strokeWidth={1.8}
+                />
+              )}
+            </Button>
+          </span>
 
           <VoiceStatus state={avatarState} notice={notice} />
 

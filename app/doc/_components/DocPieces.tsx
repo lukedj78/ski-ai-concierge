@@ -62,13 +62,7 @@ export function T({ children }: { children: ReactNode }) {
 }
 
 /** Una tabella con intestazione. */
-export function Table({
-  head,
-  rows,
-}: {
-  head: string[];
-  rows: ReactNode[][];
-}) {
+export function Table({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-[15px]">

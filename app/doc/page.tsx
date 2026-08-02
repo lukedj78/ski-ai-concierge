@@ -39,10 +39,10 @@ export default function DocPage() {
               interroga il negozio. Non da un modello che ricorda.
             </p>
             <p className="max-w-[62ch] text-[17px] leading-[1.6] text-on-surface-variant">
-              Questa pagina spiega come sta insieme: cosa fa <strong>eve</strong>,
-              come funziona la conversazione in tempo reale sul{" "}
-              <strong>Vercel AI Gateway</strong>, e come l'avatar muove la bocca
-              su quello che sente.
+              Questa pagina spiega come sta insieme: cosa fa{" "}
+              <strong>eve</strong>, come funziona la conversazione in tempo
+              reale sul <strong>Vercel AI Gateway</strong>, e come l'avatar
+              muove la bocca su quello che sente.
             </p>
             <Button
               size="lg"
@@ -80,16 +80,19 @@ export default function DocPage() {
             restituisce la risposta da dire.
           </p>
           <Note>
-            <strong>Perche' cosi'.</strong> Un modello vocale con dieci strumenti
-            in mano diventa lui l'orchestratore, e la logica del negozio finisce
-            sparsa fra due sistemi. Con un solo strumento resta quello che deve
-            essere — orecchie e bocca — e le regole del negozio restano in un
-            posto solo.
+            <strong>Perche' cosi'.</strong> Un modello vocale con dieci
+            strumenti in mano diventa lui l'orchestratore, e la logica del
+            negozio finisce sparsa fra due sistemi. Con un solo strumento resta
+            quello che deve essere — orecchie e bocca — e le regole del negozio
+            restano in un posto solo.
           </Note>
         </Section>
 
         {/* ------------------------------------------------------------- */}
-        <Section eyebrow="I confini" title="Tre regole che il codice rende vere">
+        <Section
+          eyebrow="I confini"
+          title="Tre regole che il codice rende vere"
+        >
           <Table
             head={["Regola", "Come si verifica"]}
             rows={[
@@ -142,8 +145,8 @@ export default function DocPage() {
 
           <h3 className="pt-2 text-[19px] font-semibold">Le skill</h3>
           <p>
-            Sono <strong>procedure</strong>, non codice: un file markdown con una
-            descrizione in testa. Il modello le carica quando servono con{" "}
+            Sono <strong>procedure</strong>, non codice: un file markdown con
+            una descrizione in testa. Il modello le carica quando servono con{" "}
             <T>load_skill</T>, cosi' le istruzioni di base restano corte e la
             competenza arriva al momento giusto. La skill <T>advisor</T>, per
             dire, impone di raccogliere livello, altezza, peso e stile{" "}
@@ -177,11 +180,11 @@ export default function DocPage() {
             ]}
           />
           <Note tone="warning">
-            <strong>Gli otto strumenti spenti.</strong> Ogni agente eve nasce con{" "}
-            <T>bash</T>, i tool sul filesystem e quelli sul web — il{" "}
+            <strong>Gli otto strumenti spenti.</strong> Ogni agente eve nasce
+            con <T>bash</T>, i tool sul filesystem e quelli sul web — il{" "}
             <em>default harness</em>. Qui sono disattivati con{" "}
-            <T>disableTool()</T>, che e' il meccanismo previsto dalla doc. Non e'
-            pignoleria: il modello chiamava <T>bash</T> per rispondere a una
+            <T>disableTool()</T>, che e' il meccanismo previsto dalla doc. Non
+            e' pignoleria: il modello chiamava <T>bash</T> per rispondere a una
             domanda sui noleggi e la sessione restava appesa per minuti su una
             sandbox che non abbiamo configurato. Il perche' completo sta in{" "}
             <T>agent/tools/README.md</T>.
@@ -189,7 +192,10 @@ export default function DocPage() {
         </Section>
 
         {/* ------------------------------------------------------------- */}
-        <Section eyebrow="La voce" title="Realtime speech-to-speech, non tre salti">
+        <Section
+          eyebrow="La voce"
+          title="Realtime speech-to-speech, non tre salti"
+        >
           <p>
             La prima versione faceva tre salti: audio → testo con Whisper, testo
             → ragionamento, testo → audio con un modello di sintesi. La latenza
@@ -206,10 +212,11 @@ export default function DocPage() {
 3. il browser apre la WebSocket      useRealtime({ model, api: { token } })
 4. il microfono entra nella sessione startAudioCapture(stream)`}</Code>
           <p>
-            La rotta del gettone dichiara anche <strong>l'unico strumento</strong>{" "}
-            della sessione vocale, <T>chiedi_al_negozio</T>. Quando il modello lo
-            chiama, il browser inoltra la domanda alla sessione eve gia' aperta e
-            restituisce la risposta: e' il ponte fra la voce e il negozio.
+            La rotta del gettone dichiara anche{" "}
+            <strong>l'unico strumento</strong> della sessione vocale,{" "}
+            <T>chiedi_al_negozio</T>. Quando il modello lo chiama, il browser
+            inoltra la domanda alla sessione eve gia' aperta e restituisce la
+            risposta: e' il ponte fra la voce e il negozio.
           </p>
           <Note>
             <strong>Due dettagli che costano ore se non li sai.</strong> Le
@@ -229,7 +236,10 @@ export default function DocPage() {
         </Section>
 
         {/* ------------------------------------------------------------- */}
-        <Section eyebrow="L'avatar" title="Quattro stati, e una bocca che segue le vocali">
+        <Section
+          eyebrow="L'avatar"
+          title="Quattro stati, e una bocca che segue le vocali"
+        >
           <p>
             La scena 3D non sa niente di eve, di modelli o di prenotazioni.
             Riceve due cose: uno <strong>stato</strong> fra{" "}
@@ -254,35 +264,36 @@ export default function DocPage() {
   4. la coppia (F1, F2) si confronta con le cinque vocali italiane
      e i pesi escono per distanza inversa, in scala logaritmica`}</Code>
           <p>
-            I pesi pilotano i visemi Oculus del modello —{" "}
-            <T>viseme_aa</T>, <T>viseme_I</T>, <T>viseme_U</T>, <T>viseme_E</T>,{" "}
-            <T>viseme_O</T> — piu' <T>jawOpen</T> che accompagna. Verificato
-            sintetizzando le cinque vocali alle loro formanti: le riconosce tutte
-            con margine netto.
+            I pesi pilotano i visemi Oculus del modello — <T>viseme_aa</T>,{" "}
+            <T>viseme_I</T>, <T>viseme_U</T>, <T>viseme_E</T>, <T>viseme_O</T> —
+            piu' <T>jawOpen</T> che accompagna. Verificato sintetizzando le
+            cinque vocali alle loro formanti: le riconosce tutte con margine
+            netto.
           </p>
           <Note>
             <strong>La bocca segue il tempo dell'audio, non della rete.</strong>{" "}
             I blocchi arrivano prima di quando si sentono, perche' il player ne
             accumula qualche decimo di secondo. Ogni blocco entra in coda con la
             propria durata e un ciclo la consuma al ritmo dell'orologio —
-            altrimenti la bocca parte in anticipo, si muove a raffica e poi resta
-            senza materiale.
+            altrimenti la bocca parte in anticipo, si muove a raffica e poi
+            resta senza materiale.
           </Note>
           <p>
             Il modello e' un <T>.glb</T> con 72 morph target e uno scheletro di
             67 ossa. Si sostituisce mettendo un altro file in{" "}
             <T>public/avatar/</T>; <T>pnpm avatar:inspect</T> dice se e'
             animabile prima ancora di aprire il browser. Sono supportati anche i
-            VRM, e i modelli senza blendshape: in quel caso si ruota l'osso della
-            mandibola.
+            VRM, e i modelli senza blendshape: in quel caso si ruota l'osso
+            della mandibola.
           </p>
         </Section>
 
         {/* ------------------------------------------------------------- */}
         <Section eyebrow="I dati" title="Neon, oppure il negozio in memoria">
           <p>
-            Lo schema Drizzle ha magazzino, listino a fasce, catalogo di vendita,
-            prenotazioni e documentazione con embedding su <T>pgvector</T>.
+            Lo schema Drizzle ha magazzino, listino a fasce, catalogo di
+            vendita, prenotazioni e documentazione con embedding su{" "}
+            <T>pgvector</T>.
           </p>
           <Code>{`users · conversations · messages
 equipment · products · rental_rates
@@ -291,14 +302,13 @@ knowledge_documents (embedding vector(1536), indice HNSW)`}</Code>
           <p>
             Se <T>DATABASE_URL</T> non e' configurata i cinque strumenti leggono
             da un catalogo in memoria che rispecchia il seed: la demo gira lo
-            stesso, prenotazioni comprese, e i pezzi prenotati risultano
-            davvero occupati. Col database collegato non cambia una riga di
-            codice.
+            stesso, prenotazioni comprese, e i pezzi prenotati risultano davvero
+            occupati. Col database collegato non cambia una riga di codice.
           </p>
           <Note tone="warning">
             I dati sono verosimili ma <strong>inventati</strong>. Prima di
-            mostrarli a chi il mestiere lo conosce vanno sostituiti con i listini
-            veri di un negozio.
+            mostrarli a chi il mestiere lo conosce vanno sostituiti con i
+            listini veri di un negozio.
           </Note>
         </Section>
 
@@ -311,11 +321,11 @@ pnpm install
 cp .env.example .env.local   # e incolla AI_GATEWAY_API_KEY
 pnpm dev`}</Code>
           <p>
-            <T>pnpm dev</T> avvia Next e, accanto, il server di eve. Attenzione a
-            una cosa che fa perdere mezz'ora: <strong>eve esegue uno snapshot</strong>{" "}
-            del progetto scattato al proprio avvio. Dopo una modifica sotto{" "}
-            <T>agent/</T>, riavviare la pagina non basta — va riavviato il
-            processo.
+            <T>pnpm dev</T> avvia Next e, accanto, il server di eve. Attenzione
+            a una cosa che fa perdere mezz'ora:{" "}
+            <strong>eve esegue uno snapshot</strong> del progetto scattato al
+            proprio avvio. Dopo una modifica sotto <T>agent/</T>, riavviare la
+            pagina non basta — va riavviato il processo.
           </p>
           <Table
             head={["Variabile", "A cosa serve"]}
@@ -344,8 +354,8 @@ pnpm dev`}</Code>
           />
           <p>
             Il deploy e' un progetto Vercel solo: <T>withEve()</T> fa convivere
-            l'app e l'agente, e le rotte del protocollo finiscono sul servizio di
-            eve.
+            l'app e l'agente, e le rotte del protocollo finiscono sul servizio
+            di eve.
           </p>
         </Section>
 
@@ -370,7 +380,8 @@ pnpm dev`}</Code>
                 "Approvazione umana sulle scritture",
                 <>
                   eve ha <T>human-in-the-loop</T> e questo prodotto lo merita
-                  prima di andare live: creare una prenotazione e' irreversibile.
+                  prima di andare live: creare una prenotazione e'
+                  irreversibile.
                 </>,
               ],
               [

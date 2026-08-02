@@ -282,4 +282,3 @@ function GlbFigure({
 
   return <primitive object={gltf.scene} />;
 }
-

@@ -1,0 +1,27 @@
+{
+  "project_slug": "ski-ai-concierge",
+  "project_name": "Ski AI Concierge",
+  "created_at": "2026-08-02T13:36:36Z",
+  "updated_at": "2026-08-02T13:40:25Z",
+  "phase": "empty",
+  "stack": {
+    "framework": "next",
+    "ui": "shadcn",
+    "auth": null,
+    "db": "neon-drizzle",
+    "payments": null,
+    "deploy": "vercel",
+    "nextjs_version": "16",
+    "ui_base": "radix",
+    "icon_library": "lucide",
+    "agent": "eve"
+  },
+  "history": [],
+  "artifacts": {
+    "docs/superpowers/specs/2026-08-02-ski-ai-concierge-design.md": {
+      "sha256": "e1199a7705ca0dbac351932d4b61862d0f1c43d5c09d027c4c2fdf746fb660e0",
+      "produced_by": "brainstorming",
+      "produced_at": "2026-08-02T13:40:25Z"
+    }
+  }
+}

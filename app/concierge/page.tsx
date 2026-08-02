@@ -1,5 +1,3 @@
-import { access } from "node:fs/promises";
-import { join } from "node:path";
 import type { Metadata } from "next";
 import { voiceModels } from "@/agent/subagents/voice/models";
 import { SiteTopNav } from "@/components/shared/site/site-top-nav";
@@ -12,29 +10,19 @@ export const metadata: Metadata = {
 };
 
 /**
- * Dove si cerca il modello 3D, in ordine. Il primo che esiste vince.
- * `NEXT_PUBLIC_AVATAR_URL` ha la precedenza e accetta anche un URL assoluto.
+ * Il modello 3D. Si sostituisce mettendo un altro file in `public/avatar/`
+ * oppure puntando `NEXT_PUBLIC_AVATAR_URL` altrove, anche a un URL assoluto.
+ *
+ * Non si verifica che il file esista: in una funzione serverless la cartella
+ * `public/` non c'e' — la servono la CDN e il browser — quindi un controllo
+ * con `access()` fallirebbe sempre in produzione e mostrerebbe il segnaposto
+ * anche con il modello caricato. Se il file davvero non c'e', se ne accorge il
+ * boundary attorno alla scena e ricade sulla figura disegnata.
  */
-const AVATAR_CANDIDATES = ["/avatar/instructor.glb", "/avatar/instructor.vrm"];
+const AVATAR_URL =
+  process.env.NEXT_PUBLIC_AVATAR_URL || "/avatar/instructor.glb";
 
-async function resolveAvatarUrl(): Promise<string | null> {
-  const configured = process.env.NEXT_PUBLIC_AVATAR_URL;
-  if (configured && !configured.startsWith("/")) return configured;
-
-  for (const candidate of configured ? [configured] : AVATAR_CANDIDATES) {
-    try {
-      await access(join(process.cwd(), "public", candidate));
-      return candidate;
-    } catch {
-      // Si prova il prossimo.
-    }
-  }
-  return null;
-}
-
-export default async function ConciergePage() {
-  const avatarUrl = await resolveAvatarUrl();
-
+export default function ConciergePage() {
   return (
     <>
       <SiteTopNav />
@@ -45,7 +33,7 @@ export default async function ConciergePage() {
           model={voiceModels.realtime}
           voice={voiceModels.realtimeVoice}
           transcription={voiceModels.transcription}
-          avatarUrl={avatarUrl}
+          avatarUrl={AVATAR_URL}
         />
       </main>
     </>

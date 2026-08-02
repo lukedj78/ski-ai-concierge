@@ -78,6 +78,9 @@ export function ConciergeShell({
     question: string;
     tools: string[];
   } | null>(null);
+
+  /** Il modello vocale sta preparando una risposta. */
+  const [responding, setResponding] = useState(false);
   const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const greeted = useRef(false);
   const askResolver = useRef<{
@@ -225,6 +228,11 @@ export function ConciergeShell({
       }
     },
     onEvent(event) {
+      // Fra la domanda e la prima sillaba passano dei secondi: senza un segno
+      // sullo schermo la conversazione sembra piantata.
+      if (event.type === "response-created") setResponding(true);
+      if (event.type === "response-done") setResponding(false);
+
       // Il hook riproduce l'audio da se': l'ampiezza per il lip sync si ricava
       // dai chunk PCM16 in arrivo, che sono lo stesso audio un istante prima
       // che si senta.
@@ -361,6 +369,7 @@ export function ConciergeShell({
             messages={chatMessages}
             busy={status === "connecting"}
             thinking={thinking}
+            responding={responding}
             error={null}
             onSend={(text) => {
               // Scrivere e parlare entrano nella stessa sessione: l'avatar

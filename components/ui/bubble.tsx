@@ -9,7 +9,12 @@ function BubbleGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="bubble-group"
-      className={cn("flex min-w-0 flex-col gap-2", className)}
+      // `w-full` non e' decorativo: il contenitore riceve `self-end` dal
+      // messaggio, che in una colonna flex lo fa restringere sul contenuto.
+      // Senza, la larghezza massima della bolla si calcola su quella misura
+      // ridotta e il testo va a capo molto prima del necessario — misurato:
+      // riga 776px, bolla 335px, testo che ne chiedeva 364.
+      className={cn("flex w-full min-w-0 flex-col gap-2", className)}
       {...props}
     />
   );

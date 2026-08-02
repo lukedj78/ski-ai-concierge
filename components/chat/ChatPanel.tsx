@@ -13,6 +13,8 @@ export type ChatPanelProps = {
   busy: boolean;
   /** Cosa sta facendo il negozio mentre il cliente aspetta. */
   thinking?: { question: string; tools: string[] } | null;
+  /** Il concierge sta preparando la risposta, prima ancora di parlare. */
+  responding?: boolean;
   error?: Error | null;
   onSend: (text: string) => void;
 };
@@ -27,15 +29,21 @@ export function ChatPanel({
   messages,
   busy,
   thinking,
+  responding,
   error,
   onSend,
 }: ChatPanelProps) {
   return (
     <Card className="flex h-full min-h-0 flex-col gap-0 overflow-hidden p-0">
-      {messages.length === 0 && !thinking ? (
+      {messages.length === 0 && !thinking && !responding ? (
         <EmptyState />
       ) : (
-        <MessageList messages={messages} busy={busy} thinking={thinking} />
+        <MessageList
+          messages={messages}
+          busy={busy}
+          thinking={thinking}
+          responding={responding}
+        />
       )}
 
       {error ? (

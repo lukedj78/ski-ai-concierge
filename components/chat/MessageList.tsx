@@ -34,12 +34,15 @@ export type MessageListProps = {
    * Serve a non lasciare lo schermo fermo proprio mentre si lavora.
    */
   thinking?: { question: string; tools: string[] } | null;
+  /** Il concierge sta preparando la risposta, prima ancora di parlare. */
+  responding?: boolean;
 };
 
 export function MessageList({
   messages,
   busy,
   thinking,
+  responding,
 }: MessageListProps) {
   return (
     // Il Provider e' obbligatorio: e' lui a tenere il contesto che il pulsante
@@ -72,6 +75,13 @@ export function MessageList({
                     </Marker>
                   ))}
                 </div>
+              </MessageScrollerItem>
+            ) : responding ? (
+              <MessageScrollerItem scrollAnchor>
+                <Marker className="gap-2">
+                  <Spinner className="size-3" />
+                  sto pensando
+                </Marker>
               </MessageScrollerItem>
             ) : busy ? (
               <MessageScrollerItem scrollAnchor>

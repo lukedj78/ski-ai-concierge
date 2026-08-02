@@ -211,8 +211,10 @@ export function ConciergeShell({
 
       return {
         ...base,
-        // Sia voce sia testo: la chat scrive quello che l'avatar dice.
-        outputModalities: ["audio" as const, "text" as const],
+        // Solo audio: il provider accetta ['text'] oppure ['audio'], mai
+        // entrambe ("Invalid modalities"). Il testo per la chat arriva dalla
+        // trascrizione dell'output, che e' esattamente il suo mestiere.
+        outputModalities: ["audio" as const],
         // E anche quello che dici tu, altrimenti la conversazione in chat
         // risulterebbe a meta'.
         inputAudioTranscription: {

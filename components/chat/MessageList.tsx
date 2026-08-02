@@ -1,6 +1,8 @@
 "use client";
 
 import type { EveMessage } from "eve/client";
+import { Wrench01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Streamdown } from "streamdown";
 import { Bubble, BubbleContent, BubbleGroup } from "@/components/ui/bubble";
 import { Marker } from "@/components/ui/marker";
@@ -14,6 +16,15 @@ import {
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
 import { Spinner } from "@/components/ui/spinner";
+
+/**
+ * Mostrare i tool che girano.
+ *
+ * Serve in questa fase di sviluppo, per vedere che il concierge interroga
+ * davvero il negozio invece di inventare. Si spegne con
+ * NEXT_PUBLIC_SHOW_TOOLS=false quando si va live.
+ */
+const SHOW_TOOLS = process.env.NEXT_PUBLIC_SHOW_TOOLS !== "false";
 
 /** Cosa scrivere mentre un tool lavora. Lo stato ha un nome, non uno spinner muto. */
 const TOOL_LABEL: Record<string, string> = {
@@ -71,16 +82,26 @@ export function MessageList({
                     <Spinner className="size-3" />
                     controllo in negozio
                   </Marker>
-                  {thinking.tools.map((tool, index) => (
-                    <Marker
-                      // I tool possono ripetersi nello stesso turno: la chiave
-                      // tiene conto anche della posizione.
-                      key={`${tool}-${index}`}
-                      className="ml-4 font-[family-name:var(--font-jetbrains-mono)] text-[12px]"
-                    >
-                      {TOOL_LABEL[tool] ?? tool}
-                    </Marker>
-                  ))}
+                  {SHOW_TOOLS
+                    ? thinking.tools.map((tool, index) => (
+                        <Marker
+                          // I tool possono ripetersi nello stesso turno: la
+                          // chiave tiene conto anche della posizione.
+                          key={`${tool}-${index}`}
+                          className="ml-4 gap-2 font-[family-name:var(--font-jetbrains-mono)] text-[12px]"
+                        >
+                          <HugeiconsIcon
+                            icon={Wrench01Icon}
+                            size={13}
+                            strokeWidth={1.8}
+                          />
+                          {tool}
+                          <span className="text-on-surface-variant">
+                            — {TOOL_LABEL[tool] ?? "in corso"}
+                          </span>
+                        </Marker>
+                      ))
+                    : null}
                 </div>
               </MessageScrollerItem>
             ) : responding ? (

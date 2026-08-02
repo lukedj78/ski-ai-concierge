@@ -204,14 +204,25 @@ export function ConciergeShell({
     // does not handle transcription or translation" — e chiedergliela lo
     // faceva smettere di parlare del tutto.
     if (!modelId.startsWith("xai/grok-voice")) {
+      // Il campo vuole il nome nativo del provider, non l'identificativo del
+      // Gateway: "whisper-1", non "openai/whisper-1". Con il prefisso il
+      // provider risponde "Invalid value" e la sessione non parte.
+      const nativeTranscription = transcription.split("/").pop() ?? transcription;
+
       return {
         ...base,
         // Sia voce sia testo: la chat scrive quello che l'avatar dice.
         outputModalities: ["audio" as const, "text" as const],
         // E anche quello che dici tu, altrimenti la conversazione in chat
         // risulterebbe a meta'.
-        inputAudioTranscription: { model: transcription, language: "it" },
-        outputAudioTranscription: { model: transcription, language: "it" },
+        inputAudioTranscription: {
+          model: nativeTranscription,
+          language: "it",
+        },
+        outputAudioTranscription: {
+          model: nativeTranscription,
+          language: "it",
+        },
       };
     }
 

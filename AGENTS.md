@@ -99,6 +99,14 @@ Per una UI web la doc di eve indica il canale `eve` + `useEveAgent`, ed e'
 quello che usiamo. Se serve un endpoint HTTP chiamato dal browser, e' una route
 handler di Next, non un canale.
 
+## Gli strumenti predefiniti di eve vanno rivisti
+
+Ogni agente eve nasce con `bash`, i tool sul filesystem e quelli sul web. Non
+sono neutri: la doc stessa dice di rivederli prima della produzione. Qui sono
+disattivati con `disableTool()` — il perche' sta in `agent/tools/README.md`.
+
+Se aggiungi un agente o un sub-agente, quel controllo va rifatto.
+
 ## Struttura
 
 ```

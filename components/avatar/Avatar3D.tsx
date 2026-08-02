@@ -9,6 +9,7 @@ import { useFrame, useLoader } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import { type Group, type Mesh, Vector3 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { AvatarFallbackBoundary } from "./AvatarFallbackBoundary";
 import { idleMotion } from "./animations/idle";
 import {
   damp,
@@ -35,17 +36,25 @@ export type Avatar3DProps = {
  * cambiasse, questo file non se ne accorgerebbe.
  */
 export function Avatar3D({ state, amplitude = 0, vrmUrl }: Avatar3DProps) {
-  if (!vrmUrl) {
-    return <PlaceholderFigure state={state} amplitude={amplitude} />;
-  }
+  const fallback = <PlaceholderFigure state={state} amplitude={amplitude} />;
+
+  if (!vrmUrl) return fallback;
+
   // Due formati, due strade. `.vrm` porta con se' le espressioni standard;
   // un `.glb` realistico (Ready Player Me, Avaturn, un modello proprio) porta
   // i morph target ARKit e i visemi Oculus. Il resto dell'interfaccia non
   // vede la differenza.
-  if (vrmUrl.toLowerCase().endsWith(".vrm")) {
-    return <VrmFigure url={vrmUrl} state={state} amplitude={amplitude} />;
-  }
-  return <GlbFigure url={vrmUrl} state={state} amplitude={amplitude} />;
+  const isVrm = vrmUrl.split("?")[0]?.toLowerCase().endsWith(".vrm") ?? false;
+
+  return (
+    <AvatarFallbackBoundary fallback={fallback}>
+      {isVrm ? (
+        <VrmFigure url={vrmUrl} state={state} amplitude={amplitude} />
+      ) : (
+        <GlbFigure url={vrmUrl} state={state} amplitude={amplitude} />
+      )}
+    </AvatarFallbackBoundary>
+  );
 }
 
 function VrmFigure({

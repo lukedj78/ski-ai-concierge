@@ -31,7 +31,19 @@ const schema = z.object({
   EMBEDDING_MODEL: z.string().min(1).default("openai/text-embedding-3-small"),
 });
 
-const parsed = schema.safeParse(process.env);
+/**
+ * Una variabile lasciata vuota in `.env.local` arriva come stringa vuota, non
+ * come assente. Senza questa normalizzazione `AI_GATEWAY_API_KEY=` fa fallire
+ * la validazione e l'app non parte — che e' esattamente il contrario di quello
+ * che serve a chi sta ancora configurando.
+ */
+const provided = Object.fromEntries(
+  Object.entries(process.env).filter(
+    ([, value]) => value !== undefined && value.trim().length > 0,
+  ),
+);
+
+const parsed = schema.safeParse(provided);
 
 if (!parsed.success) {
   const details = parsed.error.issues

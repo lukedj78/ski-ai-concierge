@@ -14,8 +14,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "node --experimental-strip-types db/seed.ts",
-    "eval": "eve eval",
-    "avatar:fetch": "mkdir -p public/avatar && curl -fL -o public/avatar/instructor.glb \"https://models.readyplayer.me/${AVATAR_ID:-6185a4acfb622cf1cdc49348}.glb?morphTargets=ARKit,Oculus%20Visemes&textureAtlas=1024&pose=A\""
+    "eval": "eve eval"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.37",

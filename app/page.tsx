@@ -38,7 +38,9 @@ export default async function Home() {
 
   return (
     <>
-      <SiteTopNav status={vrmUrl ? "avatar attivo" : "avatar segnaposto"} />
+      {/* Nessun badge sullo stato dell'avatar: il server sa se la variabile
+          e' valorizzata, non se il modello si e' davvero caricato. */}
+      <SiteTopNav />
       <main className="flex min-h-0 flex-1 flex-col bg-background">
         <ConciergeShell vrmUrl={vrmUrl} />
       </main>

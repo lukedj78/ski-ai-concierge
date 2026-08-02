@@ -162,3 +162,69 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Utility richieste dai componenti chat di shadcn.
+   Il message-scroller le usa nelle proprie classi ma non le porta con se': se
+   mancano, quelle classi non fanno nulla e il componente si vede storto senza
+   dare errore. Consumano i token del tema.
+   --------------------------------------------------------------------------- */
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
+
+/* La sfumatura sul bordo inferiore del viewport: dice che sotto c'e' altro. */
+@utility scroll-fade-b {
+  mask-image: linear-gradient(
+    to bottom,
+    black calc(100% - 2rem),
+    transparent 100%
+  );
+}
+
+@keyframes ui-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@utility shimmer {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--foreground) 8%, transparent),
+      transparent
+    );
+    animation: ui-shimmer 1.5s infinite;
+  }
+}

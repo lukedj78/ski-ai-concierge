@@ -51,23 +51,21 @@ export function MessageList({
     <MessageScrollerProvider>
       <MessageScroller className="flex-1">
         <MessageScrollerViewport>
-          {/* `justify-end`: con pochi messaggi la conversazione sta in basso,
-              come in qualunque chat, invece di restare appesa in alto. */}
-          <MessageScrollerContent className="justify-end px-4 py-6">
+          <MessageScrollerContent className="px-4 py-6">
             {messages.map((message, index) => (
               <MessageScrollerItem
                 key={message.id}
-                // L'ancora sta sull'ultimo elemento: e' quello che deve
-                // restare in vista mentre la conversazione cresce.
-                scrollAnchor={
-                  index === messages.length - 1 && !thinking && !responding
-                }
+                // L'ancora sta sull'ultimo messaggio e basta: e' la
+                // composizione prevista dal primitivo. Metterla anche sulle
+                // righe di attesa — che compaiono e spariscono — faceva
+                // saltare la vista a ogni turno.
+                scrollAnchor={index === messages.length - 1}
               >
                 <MessageRow message={message} />
               </MessageScrollerItem>
             ))}
             {thinking ? (
-              <MessageScrollerItem scrollAnchor>
+              <MessageScrollerItem>
                 <div className="space-y-1.5 py-1">
                   <Marker className="gap-2">
                     <Spinner className="size-3" />
@@ -86,14 +84,14 @@ export function MessageList({
                 </div>
               </MessageScrollerItem>
             ) : responding ? (
-              <MessageScrollerItem scrollAnchor>
+              <MessageScrollerItem>
                 <Marker className="gap-2">
                   <Spinner className="size-3" />
                   sto pensando
                 </Marker>
               </MessageScrollerItem>
             ) : busy ? (
-              <MessageScrollerItem scrollAnchor>
+              <MessageScrollerItem>
                 <Marker className="gap-2">
                   <Spinner className="size-3" />
                   un attimo

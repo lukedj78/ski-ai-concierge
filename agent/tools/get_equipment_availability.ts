@@ -1,6 +1,7 @@
 import { and, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
+import { catalog, hasDatabase, isBusy } from "../lib/catalog";
 import { getDb } from "../../db/index";
 import { bookings, equipment, rentals } from "../../db/schema";
 
@@ -34,6 +35,55 @@ export default defineTool({
       return {
         error: "date_invertite",
         message: "La data di fine e' precedente a quella di inizio.",
+      };
+    }
+
+    // Senza database il negozio vive in memoria: la demo gira lo stesso.
+    if (!hasDatabase()) {
+      const wantedLength = input.lengthCm;
+      const wantedMondo = input.mondopoint
+        ? Number.parseFloat(input.mondopoint)
+        : undefined;
+
+      const free = catalog
+        .filter((item) => item.category === input.category)
+        .filter((item) => (input.level ? item.level === input.level : true))
+        .filter((item) => (input.style ? item.style === input.style : true))
+        .filter((item) => !isBusy(item.id, input.startDate, input.endDate));
+
+      const scored = free
+        .map((item) => {
+          let distance = 0;
+          if (wantedLength && item.lengthCm) {
+            distance = Math.abs(item.lengthCm - wantedLength);
+          } else if (wantedMondo && item.mondopoint) {
+            distance = Math.abs(Number.parseFloat(item.mondopoint) - wantedMondo);
+          }
+          return { item, distance };
+        })
+        .sort((a, b) => a.distance - b.distance);
+
+      const askedForSize = Boolean(wantedLength || wantedMondo);
+      const exact = scored.filter((entry) => entry.distance === 0);
+      const near = scored.filter((entry) => entry.distance > 0).slice(0, 4);
+      const shape = (entry: (typeof scored)[number]) => ({
+        id: entry.item.id,
+        brand: entry.item.brand,
+        model: entry.item.model,
+        lengthCm: entry.item.lengthCm ?? null,
+        mondopoint: entry.item.mondopoint ?? null,
+        sizeLabel: entry.item.sizeLabel ?? null,
+        level: entry.item.level ?? null,
+        style: entry.item.style ?? null,
+        distanceFromRequested: entry.distance,
+      });
+
+      return {
+        period: { startDate: input.startDate, endDate: input.endDate },
+        totalFree: free.length,
+        exactMatches: (askedForSize ? exact : scored).slice(0, 8).map(shape),
+        alternatives: askedForSize ? near.map(shape) : [],
+        source: "catalogo in memoria (nessun database configurato)",
       };
     }
 

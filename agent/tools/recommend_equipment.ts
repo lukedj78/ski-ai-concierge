@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
+import { catalog, hasDatabase } from "../lib/catalog";
 import { getDb } from "../../db/index";
 import { equipment } from "../../db/schema";
 
@@ -77,6 +78,103 @@ export default defineTool({
       ),
   }),
   async execute(input) {
+    const targetLengthPre = recommendedSkiLength(
+      input.heightCm,
+      input.weightKg,
+      input.level,
+      input.style,
+    );
+
+    if (!hasDatabase()) {
+      const flexMem = recommendedFlex(input.level, input.weightKg);
+      const mondoMem = input.shoeSizeEu
+        ? euToMondopoint(input.shoeSizeEu)
+        : undefined;
+      const poleTarget = Math.round(input.heightCm * 0.68);
+
+      const nearest = (
+        items: typeof catalog,
+        value: (item: (typeof catalog)[number]) => number | undefined,
+        target: number,
+      ) =>
+        items
+          .filter((item) => value(item) !== undefined)
+          .sort(
+            (a, b) =>
+              Math.abs((value(a) as number) - target) -
+              Math.abs((value(b) as number) - target),
+          )[0];
+
+      const ski = nearest(
+        catalog.filter(
+          (item) =>
+            item.category === "skis" &&
+            item.level === input.level &&
+            item.style === input.style,
+        ),
+        (item) => item.lengthCm,
+        targetLengthPre,
+      );
+      const pole = nearest(
+        catalog.filter((item) => item.category === "poles"),
+        (item) => item.lengthCm,
+        poleTarget,
+      );
+      const boot = mondoMem
+        ? nearest(
+            catalog.filter((item) => item.category === "boots"),
+            (item) =>
+              item.mondopoint ? Number.parseFloat(item.mondopoint) : undefined,
+            mondoMem,
+          )
+        : undefined;
+
+      const setupMem = [];
+      if (ski) {
+        setupMem.push({
+          category: "skis" as const,
+          equipmentId: ski.id,
+          label: `${ski.brand} ${ski.model} ${ski.lengthCm} cm`,
+          reason: `${targetLengthPre} cm e' la misura giusta per ${input.heightCm} cm e ${input.weightKg} kg con uno stile ${input.style}; a magazzino la piu' vicina e' ${ski.lengthCm} cm.`,
+        });
+      }
+      if (boot) {
+        setupMem.push({
+          category: "boots" as const,
+          equipmentId: boot.id,
+          label: `${boot.brand} ${boot.model} mondopoint ${boot.mondopoint}`,
+          reason: `Con il ${input.shoeSizeEu} europeo il mondopoint e' circa ${mondoMem}; il flex indicato per il tuo livello e peso e' ${flexMem}.`,
+        });
+      }
+      if (pole) {
+        setupMem.push({
+          category: "poles" as const,
+          equipmentId: pole.id,
+          label: `${pole.brand} ${pole.model} ${pole.lengthCm} cm`,
+          reason: `I bastoncini si prendono a circa il 68% dell'altezza: ${poleTarget} cm.`,
+        });
+      }
+
+      const missingMem: string[] = [];
+      if (!ski) missingMem.push("sci del livello e dello stile richiesti");
+      if (!input.shoeSizeEu) missingMem.push("numero di scarpa per gli scarponi");
+
+      return {
+        profile: {
+          level: input.level,
+          heightCm: input.heightCm,
+          weightKg: input.weightKg,
+          style: input.style,
+        },
+        targetSkiLengthCm: targetLengthPre,
+        recommendedFlex: flexMem,
+        mondopoint: mondoMem ?? null,
+        setup: setupMem,
+        missing: missingMem,
+        source: "catalogo in memoria (nessun database configurato)",
+      };
+    }
+
     const db = getDb();
 
     const targetLength = recommendedSkiLength(

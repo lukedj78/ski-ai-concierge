@@ -1,6 +1,13 @@
 import { and, desc, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
+import {
+  bookings as memBookings,
+  catalog,
+  hasDatabase,
+  isBusy,
+  rateFor,
+} from "../lib/catalog";
 import { getDb } from "../../db/index";
 import { bookings, equipment, rentalRates, rentals } from "../../db/schema";
 import { rentalDays } from "./calculate_rental_price";
@@ -32,9 +39,11 @@ export default defineTool({
     startDate: isoDate,
     endDate: isoDate,
     equipmentIds: z
-      .array(z.string().uuid())
+      .array(z.string().min(1))
       .min(1)
-      .describe("Gli id restituiti da get_equipment_availability."),
+      .describe(
+        "Gli id restituiti da get_equipment_availability, cosi' come sono.",
+      ),
     withInsurance: z.boolean().default(false),
   }),
   async execute(input) {
@@ -43,6 +52,74 @@ export default defineTool({
       return {
         error: "periodo_non_valido",
         message: "Il periodo richiesto non copre nemmeno un giorno.",
+      };
+    }
+
+    if (!hasDatabase()) {
+      const pieces = input.equipmentIds
+        .map((id) => catalog.find((item) => item.id === id))
+        .filter((item): item is (typeof catalog)[number] => Boolean(item));
+
+      if (pieces.length !== input.equipmentIds.length) {
+        return {
+          error: "attrezzatura_inesistente",
+          message:
+            "Uno degli articoli richiesti non esiste a catalogo. Ricontrolla la disponibilita'.",
+        };
+      }
+
+      const taken = pieces.filter((piece) =>
+        isBusy(piece.id, input.startDate, input.endDate),
+      );
+      if (taken.length > 0) {
+        return {
+          error: "non_piu_disponibile",
+          message:
+            "Nel frattempo qualcuno ha prenotato uno degli articoli. Non ho scritto niente.",
+          unavailable: taken.map((piece) => ({
+            id: piece.id,
+            label: `${piece.brand} ${piece.model}`,
+          })),
+        };
+      }
+
+      let totalCents = 0;
+      let depositCents = 0;
+      for (const piece of pieces) {
+        const rate = rateFor(piece.category, piece.level, days);
+        if (!rate) {
+          return {
+            error: "listino_mancante",
+            message: `Non c'e' una tariffa a listino per ${piece.category}.`,
+          };
+        }
+        totalCents +=
+          rate.pricePerDayCents * days +
+          (input.withInsurance ? rate.insurancePerDayCents * days : 0);
+        depositCents += rate.depositCents;
+      }
+
+      const code = bookingCode();
+      memBookings.push({
+        code,
+        equipmentIds: pieces.map((piece) => piece.id),
+        startDate: input.startDate,
+        endDate: input.endDate,
+      });
+
+      return {
+        code,
+        status: "confirmed",
+        period: { startDate: input.startDate, endDate: input.endDate, days },
+        items: pieces.map((piece) => ({
+          id: piece.id,
+          label: `${piece.brand} ${piece.model}`,
+          category: piece.category,
+        })),
+        totalCents,
+        depositCents,
+        currency: "EUR",
+        source: "prenotazione in memoria (nessun database configurato)",
       };
     }
 

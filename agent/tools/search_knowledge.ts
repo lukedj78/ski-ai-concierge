@@ -3,6 +3,7 @@ import { gateway } from "@ai-sdk/gateway";
 import { cosineDistance, desc, gt, sql } from "drizzle-orm";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
+import { hasDatabase, searchKnowledge as searchInMemory } from "../lib/catalog";
 import { getDb } from "../../db/index";
 import { knowledgeDocuments } from "../../db/schema";
 
@@ -21,6 +22,25 @@ export default defineTool({
     limit: z.number().int().min(1).max(8).default(4),
   }),
   async execute(input) {
+    if (!hasDatabase()) {
+      // Senza database non ci sono embedding: la ricerca e' per parole.
+      const passages = searchInMemory(input.query, input.limit);
+      return {
+        query: input.query,
+        passages: passages.map((document) => ({
+          title: document.title,
+          section: document.section,
+          content: document.content,
+          similarity: null,
+        })),
+        note:
+          passages.length === 0
+            ? "La documentazione del negozio non copre questa domanda."
+            : undefined,
+        source: "documentazione in memoria (nessun database configurato)",
+      };
+    }
+
     const db = getDb();
 
     const { embedding } = await embed({

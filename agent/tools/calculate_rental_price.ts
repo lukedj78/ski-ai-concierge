@@ -1,6 +1,7 @@
 import { and, desc, eq, lte } from "drizzle-orm";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
+import { hasDatabase, rateFor } from "../lib/catalog";
 import { getDb } from "../../db/index";
 import { rentalRates } from "../../db/schema";
 
@@ -40,6 +41,51 @@ export default defineTool({
       return {
         error: "periodo_non_valido",
         message: "Il periodo richiesto non copre nemmeno un giorno.",
+      };
+    }
+
+    if (!hasDatabase()) {
+      const lines = [];
+      let subtotalCents = 0;
+      let insuranceCents = 0;
+      let depositCents = 0;
+
+      for (const item of input.items) {
+        const rate = rateFor(item.category, item.level, days);
+        if (!rate) {
+          return {
+            error: "listino_mancante",
+            message: `Non c'e' una tariffa a listino per ${item.category}.`,
+          };
+        }
+        const lineTotal = rate.pricePerDayCents * days * item.quantity;
+        const lineInsurance = input.withInsurance
+          ? rate.insurancePerDayCents * days * item.quantity
+          : 0;
+        subtotalCents += lineTotal;
+        insuranceCents += lineInsurance;
+        depositCents += rate.depositCents * item.quantity;
+        lines.push({
+          category: item.category,
+          level: item.level ?? null,
+          quantity: item.quantity,
+          days,
+          tierFromDays: rate.minDays,
+          pricePerDayCents: rate.pricePerDayCents,
+          lineTotalCents: lineTotal,
+          insuranceCents: lineInsurance,
+        });
+      }
+
+      return {
+        period: { startDate: input.startDate, endDate: input.endDate, days },
+        lines,
+        subtotalCents,
+        insuranceCents,
+        totalCents: subtotalCents + insuranceCents,
+        depositCents,
+        currency: "EUR",
+        source: "listino in memoria (nessun database configurato)",
       };
     }
 

@@ -49,26 +49,59 @@ export function ConciergeShell({
 
   const streamRef = useRef<MediaStream | null>(null);
   const greeted = useRef(false);
-  const askResolver = useRef<((text: string) => void) | null>(null);
+  const askResolver = useRef<{
+    resolve: (text: string) => void;
+    reject: (error: Error) => void;
+  } | null>(null);
 
   // La sessione eve: e' il cervello. Il modello vocale la interroga tramite il
   // suo unico strumento; qui si aspetta la risposta e la si restituisce.
   const agent = useEveAgent({
     onEvent(event) {
-      if (event.type !== "message.completed") return;
       const waiting = askResolver.current;
       if (!waiting) return;
-      askResolver.current = null;
-      waiting(event.data.message ?? "");
+
+      if (event.type === "message.completed") {
+        askResolver.current = null;
+        waiting.resolve(event.data.message ?? "");
+        return;
+      }
+
+      // Un turno fallito deve arrivare al modello vocale come errore, non
+      // restare appeso: altrimenti la conversazione si ferma in silenzio.
+      if (event.type === "turn.failed") {
+        askResolver.current = null;
+        waiting.reject(new Error(event.data.message));
+      }
     },
   });
 
+  /** Oltre questo tempo il modello vocale deve poter dire qualcosa. */
+  const ASK_TIMEOUT_MS = 45_000;
+
   function askConcierge(question: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
-      askResolver.current = resolve;
-      agent.send({ message: question }).catch((error: unknown) => {
+      const timer = setTimeout(() => {
+        if (askResolver.current?.resolve !== resolve) return;
         askResolver.current = null;
-        reject(error);
+        reject(new Error("Il sistema del negozio non ha risposto in tempo."));
+      }, ASK_TIMEOUT_MS);
+
+      askResolver.current = {
+        resolve: (text) => {
+          clearTimeout(timer);
+          resolve(text);
+        },
+        reject: (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      };
+
+      agent.send({ message: question }).catch((error: unknown) => {
+        clearTimeout(timer);
+        askResolver.current = null;
+        reject(error instanceof Error ? error : new Error(String(error)));
       });
     });
   }
@@ -106,10 +139,12 @@ export function ConciergeShell({
       if (!question) return { errore: "domanda mancante" };
       try {
         return { risposta: await askConcierge(question) };
-      } catch {
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        console.error("[concierge] il ponte verso eve ha fallito", error);
+        setNotice(detail);
         return {
-          errore:
-            "Il sistema del negozio non ha risposto. Dillo al cliente invece di inventare.",
+          errore: `Il sistema del negozio non ha risposto: ${detail}. Dillo al cliente invece di inventare.`,
         };
       }
     },

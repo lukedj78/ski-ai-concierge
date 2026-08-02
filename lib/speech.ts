@@ -9,6 +9,20 @@ import { experimental_transcribe as transcribe } from "ai";
  * altro modello audio del catalogo — significa cambiare una variabile, non
  * questo file.
  *
+ * **Perche' sta in `lib/` e non dentro `agent/`.** Il primo tentativo e' stato
+ * un canale eve custom con le rotte `/voice/*`. Non funziona: `withEve` scrive
+ * un solo rewrite, `<prefisso>/eve/v1/:path+`, in sviluppo come su Vercel. Le
+ * rotte dei canali custom non sono mai esposte attraverso l'origine di Next —
+ * servono ai webhook in ingresso dalle piattaforme, che colpiscono il servizio
+ * eve direttamente. Per una UI web la doc di eve indica il canale `eve` +
+ * `useEveAgent`, ed e' quello che la chat usa.
+ *
+ * Trascrizione e sintesi non sono orchestrazione agentica: sono conversioni di
+ * formato. Vivono in due route handler di Next che chiamano il Gateway lato
+ * server. Il frontend continua a non sapere quale modello trascrive, e eve
+ * resta l'unico orchestratore della conversazione. La parte agentica della
+ * voce — come si parla — resta il sub-agente `agent/subagents/voice/`.
+ *
  * Perche' il TTS passa dall'endpoint REST e non da `gateway.speechModel()`:
  * la doc dice che il supporto speech nel provider Gateway e' disponibile
  * "on the canary releases of the AI SDK". Una POC non si costruisce su una

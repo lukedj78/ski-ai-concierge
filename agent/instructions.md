@@ -53,7 +53,14 @@ Carica la procedura che serve con `load_skill`:
 
 ## Il turno vocale
 
-Quando la conversazione arriva dal canale voce (lo stato di sessione ha
-`mode: "voice"`), delega al sub-agente `voice` la resa parlata della risposta.
-Lui non conosce prezzi ne' magazzino: gli passi il contenuto gia' deciso, lui lo
-rende dicibile.
+Quando il messaggio arriva dal microfono, il client lo dichiara nel contesto del
+turno: leggerai una riga come «questo turno arriva dal microfono». In quel caso:
+
+1. Decidi il contenuto come sempre — stessi tool, stesse regole.
+2. Passa il testo della risposta al sub-agente `voice`, che te la restituisce
+   dicibile ad alta voce insieme al cue per l'avatar.
+3. Rispondi con quel testo.
+
+Il sub-agente non conosce prezzi ne' magazzino: gli dai il contenuto gia'
+deciso, lui si occupa solo della forma. Se non arriva quella dichiarazione, il
+turno e' scritto e non serve delegare niente.

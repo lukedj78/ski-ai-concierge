@@ -42,6 +42,15 @@ const AUDIO_SAMPLE_RATE = 24_000;
  * chiedere niente. Ogni giro di modello in piu' e' un secondo di silenzio in
  * conversazione.
  */
+/** Il primo valore testuale degli argomenti, per etichettare la chiamata. */
+function firstArgument(input: unknown): string | null {
+  if (!input || typeof input !== "object") return null;
+  for (const value of Object.values(input as Record<string, unknown>)) {
+    if (typeof value === "string" && value.length <= 40) return value;
+  }
+  return null;
+}
+
 const BRIDGE_CONTEXT = `Questa domanda arriva dalla sessione vocale, non dal cliente: chi la riceve la leggera' ad alta voce.
 
 Rispondi con la sostanza e basta: niente saluti, niente "un attimo controllo", nessuna domanda di rimando. Se servono i tool chiamali subito, senza annunciarlo. Al massimo tre frasi, con i numeri esatti che tornano dai tool.`;
@@ -114,13 +123,13 @@ export function ConciergeShell({
       if (event.type === "actions.requested") {
         // Le azioni non sono tutte chiamate a tool: `load-skill` e le
         // deleghe ai sub-agenti hanno una forma diversa.
-        const names = event.data.actions.map((action) =>
-          action.kind === "tool-call"
-            ? action.toolName
-            : action.kind === "load-skill"
-              ? "load_skill"
-              : action.kind,
-        );
+        const names = event.data.actions.map((action) => {
+          if (action.kind !== "tool-call") return action.kind;
+          // L'argomento distingue due chiamate allo stesso tool: due
+          // `load_skill` di fila sono due skill diverse, non un doppione.
+          const argument = firstArgument(action.input);
+          return argument ? `${action.toolName} · ${argument}` : action.toolName;
+        });
         setThinking((current) =>
           current
             ? { ...current, tools: [...current.tools, ...names] }

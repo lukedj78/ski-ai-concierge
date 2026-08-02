@@ -1,5 +1,6 @@
 import { gateway } from "@ai-sdk/gateway";
 import { voiceModels } from "@/agent/subagents/voice/models";
+import { env } from "@/lib/env";
 
 /**
  * Gettone di connessione per la sessione vocale realtime.
@@ -39,9 +40,17 @@ export function GET() {
 }
 
 export async function POST() {
-  // Non si controlla la presenza di AI_GATEWAY_API_KEY: sui deployment Vercel
-  // l'autenticazione al Gateway passa dall'OIDC del progetto e la chiave non
-  // serve. Se manca davvero, e' `getToken` a dirlo con l'errore giusto.
+  if (!env.AI_GATEWAY_API_KEY) {
+    return Response.json(
+      {
+        error: "voce_non_disponibile",
+        message:
+          "AI_GATEWAY_API_KEY non e' configurata: la voce non puo' partire.",
+      },
+      { status: 503 },
+    );
+  }
+
   try {
     const { token, url } = await gateway.experimental_realtime.getToken({
       model: voiceModels.realtime,

@@ -11,10 +11,16 @@ import { env } from "@/lib/env";
  * puo' essere indietro di qualche secondo rispetto all'ultima risposta.
  */
 export async function GET() {
-  const key = env.AI_GATEWAY_API_KEY ?? process.env.VERCEL_OIDC_TOKEN;
+  // Una sola strada di autenticazione: la chiave del Gateway, in locale come
+  // in produzione. Il gettone OIDC di Vercel funzionerebbe, ma avere due modi
+  // di autenticarsi significa due modi di rompersi.
+  const key = env.AI_GATEWAY_API_KEY;
   if (!key) {
     return Response.json(
-      { error: "chiave_mancante", message: "Nessuna credenziale per il Gateway." },
+      {
+        error: "chiave_mancante",
+        message: "AI_GATEWAY_API_KEY non e' configurata.",
+      },
       { status: 503 },
     );
   }

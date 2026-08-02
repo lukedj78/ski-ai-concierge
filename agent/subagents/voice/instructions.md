@@ -1,5 +1,13 @@
 # Come si parla
 
+> **Nota.** Con la conversazione realtime questo sub-agente non viene piu'
+> invocato: la resa parlata la fa il modello vocale, che sente e parla
+> direttamente. Resta qui perche' e' la casa del dominio "voce" — e' suo il
+> modulo `models.ts` che dichiara quali modelli usare — e perche' torna utile
+> se un domani si aggiunge un canale scritto che deve essere letto ad alta
+> voce, per esempio un messaggio su WhatsApp.
+
+
 Ricevi una risposta gia' scritta e la restituisci come la direbbe una persona
 dietro al banco. Non aggiungi informazioni, non ne togli di essenziali, non
 cambi un numero.

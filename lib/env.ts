@@ -22,10 +22,9 @@ const schema = z.object({
   // Modello del sub-agente voce: risposte brevi, va bene un modello rapido.
   VOICE_AGENT_MODEL: z.string().min(1).default("anthropic/claude-haiku-4.5"),
 
-  // Voce: trascrizione e sintesi. Entrambi in beta sul Gateway.
-  VOICE_STT_MODEL: z.string().min(1).default("openai/whisper-1"),
-  VOICE_TTS_MODEL: z.string().min(1).default("openai/tts-1"),
-  VOICE_TTS_VOICE: z.string().min(1).default("alloy"),
+  // I modelli della voce non stanno qui: li definisce il sub-agente in
+  // agent/subagents/voice/models.ts. Le variabili VOICE_* e REALTIME_* le
+  // legge quel modulo.
 
   // Embedding per la ricerca semantica sulla documentazione del negozio.
   EMBEDDING_MODEL: z.string().min(1).default("openai/text-embedding-3-small"),

@@ -8,6 +8,7 @@ import { ChatPanel } from "@/components/chat/ChatPanel";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { VoiceButton } from "@/components/voice/VoiceButton";
+import { RealtimeVoice } from "@/components/voice/RealtimeVoice";
 import { VoiceStatus } from "@/components/voice/VoiceStatus";
 import {
   takeCompleteSentences,
@@ -51,6 +52,17 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
   // Segna il turno in corso come parlato: la risposta andra' letta.
   const spokenTurn = useRef(false);
 
+  // La via realtime: il modello sente e parla, e quando serve un dato vero
+  // chiede a eve. Si accende su richiesta perche' apre una sessione a consumo.
+  const [realtime, setRealtime] = useState<{
+    model: string;
+    voice: string;
+  } | null>(null);
+  const [realtimeSpeaking, setRealtimeSpeaking] = useState(false);
+
+  // Chi aspetta la risposta di un turno eve avviato dalla sessione vocale.
+  const askResolver = useRef<((text: string) => void) | null>(null);
+
   // Leggere ad alta voce ogni risposta, non solo quelle nate dal microfono.
   // Acceso di default: e' quello che ci si aspetta da un concierge parlante, e
   // in una demo la differenza fra "sa parlare" e "parla" e' tutta qui.
@@ -90,6 +102,17 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
       // Quello che resta nel buffer a fine blocco: l'ultima frase spesso non
       // ha punteggiatura finale seguita da spazio.
       if (event.type === "message.completed") {
+        // Se il turno e' stato chiesto dalla sessione realtime, la risposta la
+        // dice lei: qui si chiude solo la promessa, senza sintetizzare nulla.
+        const waiting = askResolver.current;
+        if (waiting) {
+          askResolver.current = null;
+          pending.current = "";
+          cursor.current = 0;
+          waiting(event.data.message ?? "");
+          return;
+        }
+
         if (!shouldSpeak) return;
         const tail = pending.current.trim();
         pending.current = "";
@@ -105,11 +128,40 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
     },
   });
 
+  /** Esegue un turno eve intero e restituisce il testo, per la voce realtime. */
+  function askConcierge(question: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      askResolver.current = resolve;
+      agent.send({ message: question }).catch((error: unknown) => {
+        askResolver.current = null;
+        reject(error);
+      });
+    });
+  }
+
+  async function enableRealtime() {
+    try {
+      const response = await fetch("/api/realtime/token");
+      const config = await response.json();
+      if (!response.ok) {
+        setVoiceNotice(config.message ?? "La voce realtime non e' disponibile.");
+        return;
+      }
+      setRealtime({ model: config.model, voice: config.voice });
+    } catch {
+      setVoiceNotice("La voce realtime non e' disponibile.");
+    }
+  }
+
   const busy = agent.status === "submitted" || agent.status === "streaming";
 
   const avatarState = useMemo(
-    () => avatarStateFromEvents(agent.events, { listening, speaking }),
-    [agent.events, listening, speaking],
+    () =>
+      avatarStateFromEvents(agent.events, {
+        listening,
+        speaking: speaking || realtimeSpeaking,
+      }),
+    [agent.events, listening, speaking, realtimeSpeaking],
   );
 
   function sendTyped(text: string) {
@@ -141,7 +193,7 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
           <AvatarController
             events={agent.events}
             listening={listening}
-            speaking={speaking}
+            speaking={speaking || realtimeSpeaking}
             amplitude={amplitude}
             vrmUrl={vrmUrl}
           />
@@ -159,17 +211,43 @@ export function ConciergeShell({ vrmUrl }: ConciergeShellProps) {
 
       <div className="sticky bottom-0 border-t border-outline bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-[72px] max-w-[1280px] items-center justify-center gap-4 px-4 lg:px-12">
-          <VoiceButton
-            onTranscript={sendSpoken}
-            onListeningChange={setListening}
-            onUnavailable={setVoiceNotice}
-            disabled={busy}
-          />
+          {realtime ? (
+            <RealtimeVoice
+              model={realtime.model}
+              voice={realtime.voice}
+              askConcierge={askConcierge}
+              onListeningChange={setListening}
+              onSpeakingChange={setRealtimeSpeaking}
+              onUnavailable={setVoiceNotice}
+            />
+          ) : (
+            <VoiceButton
+              onTranscript={sendSpoken}
+              onListeningChange={setListening}
+              onUnavailable={setVoiceNotice}
+              disabled={busy}
+            />
+          )}
           <VoiceStatus state={avatarState} notice={voiceNotice} />
 
           <Label
-            htmlFor="read-aloud"
+            htmlFor="realtime"
             className="ml-auto flex cursor-pointer items-center gap-2 text-[14px] text-on-surface-variant"
+          >
+            <Switch
+              id="realtime"
+              checked={realtime !== null}
+              onCheckedChange={(on) => {
+                if (on) void enableRealtime();
+                else setRealtime(null);
+              }}
+            />
+            Voce realtime
+          </Label>
+
+          <Label
+            htmlFor="read-aloud"
+            className="flex cursor-pointer items-center gap-2 text-[14px] text-on-surface-variant"
           >
             <Switch
               id="read-aloud"

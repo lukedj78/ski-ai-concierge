@@ -1,5 +1,6 @@
 import { gateway } from "@ai-sdk/gateway";
 import { generateSpeech, experimental_transcribe as transcribe } from "ai";
+import { voiceModels } from "@/agent/subagents/voice/models";
 
 /**
  * Voce: trascrizione e sintesi, entrambe attraverso il Vercel AI Gateway.
@@ -101,7 +102,7 @@ export async function transcribeAudio(audioDataUrl: string): Promise<{
   try {
     const result = await transcribe({
       model: gateway.transcriptionModel(
-        process.env.VOICE_STT_MODEL ?? "openai/whisper-1",
+        voiceModels.transcription,
       ),
       audio: bytes,
     });
@@ -131,9 +132,9 @@ export async function synthesizeSpeech(text: string): Promise<{
 
   try {
     const result = await generateSpeech({
-      model: gateway.speechModel(process.env.VOICE_TTS_MODEL ?? "openai/tts-1"),
+      model: gateway.speechModel(voiceModels.speech),
       text,
-      voice: process.env.VOICE_TTS_VOICE ?? "alloy",
+      voice: voiceModels.speechVoice,
       outputFormat: "mp3",
       language: "it",
     });

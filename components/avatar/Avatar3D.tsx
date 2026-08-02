@@ -7,7 +7,7 @@ import {
 } from "@pixiv/three-vrm";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
-import { Box3, type Group, type Mesh, Vector3 } from "three";
+import { Box3, type Group, type Mesh, type Object3D, Vector3 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { AvatarFallbackBoundary } from "./AvatarFallbackBoundary";
 import { idleMotion } from "./animations/idle";
@@ -187,7 +187,28 @@ function GlbFigure({
           .flatMap((dictionary) => Object.keys(dictionary ?? {}))
           .find((name) => /jaw|mouth.*open|open.*mouth/i.test(name)) ?? null);
 
-    return { morphMeshes, head, verticalOffset, scale, discovered };
+    // Ultima risorsa: l'osso della mandibola. I modelli riggati senza shape
+    // key — quelli che escono da MakeHuman, da Mixamo, da molte pipeline di
+    // scansione — hanno comunque un osso che apre la bocca. Ruotarlo non e'
+    // elegante quanto un viseme, ma e' la differenza fra una bocca che si
+    // muove e una faccia di cera.
+    let jawBone: Object3D | null = null;
+    if (!hasKnown && !discovered) {
+      gltf.scene.traverse((node) => {
+        if (!jawBone && /jaw|chin|mandib/i.test(node.name)) jawBone = node;
+      });
+    }
+    const jawRestX = (jawBone as Object3D | null)?.rotation.x ?? 0;
+
+    return {
+      morphMeshes,
+      head,
+      verticalOffset,
+      scale,
+      discovered,
+      jawBone: jawBone as Object3D | null,
+      jawRestX,
+    };
   }, [gltf]);
 
   function setMorph(name: string, value: number) {
@@ -219,7 +240,10 @@ function GlbFigure({
     opening.current = damp(opening.current, target);
     const weights = visemeWeights(opening.current);
 
-    if (rig.discovered) {
+    if (rig.jawBone) {
+      // ~14 gradi a bocca spalancata: oltre, la mandibola si stacca dal viso.
+      rig.jawBone.rotation.x = rig.jawRestX + opening.current * 0.25;
+    } else if (rig.discovered) {
       setMorph(rig.discovered, opening.current);
     } else {
       // Visemi Oculus, quando ci sono.
